@@ -19,7 +19,7 @@ installation; a license prompt is shown only for licenses not already accepted. 
 installation or update before using this command. Workspace launches and plugins copied into `dropins`
 must first be installed as the feature from the update site to use this action.
 
-The update site is built from `gama.p2site.devtools`, which contains only `gama.feature.devtools`. The workflow `.github/workflows/publish-devtools.yaml` of [gama-platform/gama.devtools](https://github.com/gama-platform/gama.devtools) publishes it on every change of the developer tools on `main`. Eclipse supplies the JDT/PDE, EGit/JGit and Gson dependencies; the jgrapht jars are embedded in `libs/`. To try local changes without installing, launch a runtime Eclipse from the workspace.
+The update site is built from `gama.p2site.devtools`, which contains only `gama.feature.devtools`. The workflow `.github/workflows/publish-devtools.yaml` of [gama-platform/gama.devtools](https://github.com/gama-platform/gama.devtools) publishes it on every change of the developer tools on `main`. Eclipse supplies the JDT/PDE, EGit/JGit and Gson dependencies; dependency graph analysis uses only the JDK, with no embedded libraries. To try local changes without installing, launch a runtime Eclipse from the workspace.
 
 Build it locally from the repository root with `mvn -DskipTests package` (JDK 21 or newer, Maven 3.9). It does
 not need the GAMA sources: the update site is produced in `gama.p2site.devtools/target/repository`.
@@ -58,7 +58,7 @@ java gama.ui.devtools/tests/DevToolsMenuTest.java .
 | **Update file headers** | Sets the GAMA version and copyright end year, updates existing headers and adds missing ones, with a mandatory per-file preview and undo. |
 | **Missing annotations...** | Builds a Markdown report from the warnings of the processor. It lists the undocumented GAML elements and the untested operators, per plugin. |
 | **Generate missing tests** | Writes `models/Tests/Untested Operators.gaml` in each selected plugin (or all of them). It contains one `test` stub per operator reported as not tested, with its Java signature. Stubs already in the file are kept. |
-| **Plugins dependencies...** | Runs `jdeps` on the compiled bundles and produces an interactive HTML graph of the package dependencies. This needs a JDK. |
+| **Plugins dependencies...** | Runs `jdeps` on compiled bundles and libraries and produces an interactive HTML dependency explorer and DOT export. This needs a full JDK, but no graph library. See [Static GAMA Dependencies Analysis](README_DEPENDENCIES_GRAPH.md) for standalone use and DOT compatibility. |
 | **Update...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
 | **Create... > New GAMA Plugin / Skill / Operators / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
 | **Install... > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |

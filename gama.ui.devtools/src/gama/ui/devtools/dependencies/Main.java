@@ -1,48 +1,18 @@
 package gama.ui.devtools.dependencies;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.InputStream;
-import java.io.Writer;
-import java.io.StringWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.InvalidPathException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-
-import java.util.List;
-import java.util.LinkedList;
 import java.util.Set;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.net.URI;
-
-import org.jgrapht.*;
-import org.jgrapht.graph.*;
-import org.jgrapht.nio.*;
-import org.jgrapht.nio.dot.*;
-import org.jgrapht.traverse.*;
-
-import gama.ui.devtools.dependencies.DependencyGraphBuilder;
-import gama.ui.devtools.dependencies.GraphToHtml;
 
 
 public class Main {
 
     public static void main(String argv[])
     {
+        if (argv.length > 2) throw new IllegalArgumentException(
+                "Usage: Main [libraries-directory] [output-prefix]");
         final DependencyGraphBuilder builder = new DependencyGraphBuilder();
-        final String librariesPathStr = "..";
+        final String librariesPathStr = argv.length == 0 ? ".." : argv[0];
+        final String outputPrefix = argv.length < 2 ? "./graph2" : argv[1];
         Set<Path> libraries;
         
         System.out.println("Resolving libraries in " + librariesPathStr);
@@ -61,10 +31,10 @@ public class Main {
         builder.checkServicesDependenciesRelations();
 
         System.out.println("Generating HTML graph explorer");
-        GraphToHtml.generateHtml(builder,"./graph2.html");
+        GraphToHtml.generateHtml(builder, outputPrefix + ".html");
 
         System.out.println("Exporting the graph in .dot format");
-        builder.exportGraph("./graph2.dot");
+        builder.exportGraph(outputPrefix + ".dot");
         System.out.println("done");
     }
 }

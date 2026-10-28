@@ -3,9 +3,6 @@ package gama.ui.devtools.dependencies;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
-import java.util.regex.*;
-
-import gama.ui.devtools.dependencies.DependencyGraphBuilder;
 
 /**
  * Convertisseur DOT vers HTML interactif (Version Améliorée).
@@ -14,31 +11,18 @@ import gama.ui.devtools.dependencies.DependencyGraphBuilder;
 public class GraphToHtml {
 
     public static void main(String[] args) {
-        if (args.length < 2) {
-            System.out.println("Usage: java GraphToHtml <input.dot> <output.html>");
-            return;
-        }
-
-        String inputPath = args[0];
-        String outputPath = args[1];
-
-        try {
-            DependencyGraphBuilder builder = new DependencyGraphBuilder();
-
-            // builder.resolveLibrariesInDirectory("/path/to/libraries/directory");
-            builder.fromDot(args[0]);
-
-            generateHtml(builder, outputPath);
-
-            System.out.println("generation was successful");
-        } catch (Exception e) {
-            System.err.println("Error : " + e.getMessage());
-            e.printStackTrace();
-        }
+        if (args.length != 2) throw new IllegalArgumentException(
+                "Usage: java GraphToHtml <input.dot> <output.html>");
+        DependencyGraphBuilder builder = new DependencyGraphBuilder();
+        builder.fromDot(args[0]);
+        generateHtml(builder, args[1]);
+        System.out.println("generation was successful");
     }
 
     public static void generateHtml(DependencyGraphBuilder builder, String outputPath) {
         Set<String> libraries = builder.getDependenciesGraph().vertexSet();
+        Map<String, String> ids = new LinkedHashMap<>();
+        for (String library : libraries) ids.put(library, "node-" + ids.size());
 
         StringBuilder html = new StringBuilder();
 
@@ -113,8 +97,8 @@ public class GraphToHtml {
         html.append("        </div>\n");
         html.append("        <div id=\"nav-list\">\n");
         for (String library : libraries) {
-            html.append("            <div class=\"nav-item\" id=\"nav-").append(library).append("\" onclick=\"showVertex('").append(library).append("')\">")
-                .append(library).append("</div>\n");
+            html.append("            <div class=\"nav-item\" id=\"nav-").append(ids.get(library)).append("\" onclick=\"showVertex('").append(ids.get(library)).append("')\">")
+                .append(escapeHtml(library)).append("</div>\n");
         }
         html.append("        </div>\n    </div>\n");
 
@@ -139,10 +123,10 @@ public class GraphToHtml {
 
             Set<String> exposedServices = builder.getLibraryServices(library);
 
-            html.append("        <div class=\"vertex-view\" id=\"view-").append(library).append("\">\n");
+            html.append("        <div class=\"vertex-view\" id=\"view-").append(ids.get(library)).append("\">\n");
             html.append("            <div class=\"header-section\">\n");
             html.append("                <span class=\"node-badge\">Library</span>\n");
-            html.append("                <h1>").append(library).append("</h1>\n");
+            html.append("                <h1>").append(escapeHtml(library)).append("</h1>\n");
             // html.append("                <h2>").append(builder.getLibraryPath(library).toString()).append("</h2>\n");
             html.append("            </div>\n");
             
@@ -157,11 +141,11 @@ public class GraphToHtml {
                 html.append("                    <div class=\"link-list\">\n");
                 for (String p : directImporters) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link direct-relation\" onclick=\"showVertex('")
-                        .append(p).append("')\">").append(p).append("</a></div>\n");
+                        .append(ids.get(p)).append("')\">").append(escapeHtml(p)).append("</a></div>\n");
                 }
                 for (String p : importers) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link recursive-relation\" onclick=\"showVertex('")
-                        .append(p).append("')\">").append(p).append("</a></div>\n");
+                        .append(ids.get(p)).append("')\">").append(escapeHtml(p)).append("</a></div>\n");
                 }
                 html.append("                    </div>\n");
             }
@@ -176,11 +160,11 @@ public class GraphToHtml {
                 html.append("                    <div class=\"link-list\">\n");
                 for (String s : directDependencies) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link direct-relation\" onclick=\"showVertex('")
-                        .append(s).append("')\">").append(s).append("</a></div>\n");
+                        .append(ids.get(s)).append("')\">").append(escapeHtml(s)).append("</a></div>\n");
                 }
                 for (String s : dependencies) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link recursive-relation\" onclick=\"showVertex('")
-                        .append(s).append("')\">").append(s).append("</a></div>\n");
+                        .append(ids.get(s)).append("')\">").append(escapeHtml(s)).append("</a></div>\n");
                 }
                 html.append("                    </div>\n");
             }
@@ -195,11 +179,11 @@ public class GraphToHtml {
                 html.append("                    <div class=\"link-list\">\n");
                 for (String p : directConsumers) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link direct-relation\" onclick=\"showVertex('")
-                        .append(p).append("')\">").append(p).append("</a></div>\n");
+                        .append(ids.get(p)).append("')\">").append(escapeHtml(p)).append("</a></div>\n");
                 }
                 for (String p : consumers) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link recursive-relation\" onclick=\"showVertex('")
-                        .append(p).append("')\">").append(p).append("</a></div>\n");
+                        .append(ids.get(p)).append("')\">").append(escapeHtml(p)).append("</a></div>\n");
                 }
                 html.append("                    </div>\n");
             }
@@ -214,11 +198,11 @@ public class GraphToHtml {
                 html.append("                    <div class=\"link-list\">\n");
                 for (String p : directProviders) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link direct-relation\" onclick=\"showVertex('")
-                        .append(p).append("')\">").append(p).append("</a></div>\n");
+                        .append(ids.get(p)).append("')\">").append(escapeHtml(p)).append("</a></div>\n");
                 }
                 for (String p : providers) {
                     html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-link recursive-relation\" onclick=\"showVertex('")
-                        .append(p).append("')\">").append(p).append("</a></div>\n");
+                        .append(ids.get(p)).append("')\">").append(escapeHtml(p)).append("</a></div>\n");
                 }
                 html.append("                    </div>\n");
             }
@@ -232,7 +216,7 @@ public class GraphToHtml {
             } else {
                 html.append("                    <div class=\"link-list\">\n");
                 for (String s : exposedServices) {
-                    html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-simple\">").append(s).append("</a></div>\n");
+                    html.append("                        <div class=\"link-item\"><a href=\"#\" class=\"node-simple\">").append(escapeHtml(s)).append("</a></div>\n");
                 }
                 html.append("                    </div>\n");
             }
@@ -263,7 +247,7 @@ public class GraphToHtml {
         html.append("                item.style.display = item.textContent.toLowerCase().includes(query) ? 'block' : 'none';\n");
         html.append("            });\n");
         html.append("        }\n");
-        html.append("        const first = \"").append(libraries.isEmpty() ? "" : libraries.iterator().next()).append("\";\n");
+        html.append("        const first = \"").append(ids.isEmpty() ? "" : ids.values().iterator().next()).append("\";\n");
         html.append("        if (first) showVertex(first);\n");
         html.append("    </script>\n");
         html.append("</body>\n</html>\n");
@@ -272,7 +256,12 @@ public class GraphToHtml {
             Files.writeString(Paths.get(outputPath), html.toString());
         } catch (IOException exception)
         {
-            exception.printStackTrace();
+            throw new UncheckedIOException("Cannot write dependency explorer to " + outputPath, exception);
         }
+    }
+
+    private static String escapeHtml(String text) {
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 }

@@ -59,6 +59,15 @@ jobs:
           echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin/mvn" --version
 
+      - name: Check dependency graph analysis
+        run: |
+          classes="$RUNNER_TEMP/dependency-graph-tests"
+          mkdir -p "$classes"
+          javac --release 21 -d "$classes" \
+            gama.ui.devtools/src/gama/ui/devtools/dependencies/*.java \
+            gama.ui.devtools/tests/DependencyGraphTest.java
+          java -cp "$classes" DependencyGraphTest .
+
       - name: Build the update site
         run: mvn -B -e -DskipTests package
 

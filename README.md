@@ -17,3 +17,6 @@ Build with `mvn -DskipTests package` (JDK 21+, Maven 3.9). Tests:
 java gama.ui.devtools/tests/DevToolsMenuTest.java .
 python3 -m unittest discover -s gama.p2site.devtools -p 'test_publish.py'
 ```
+
+The JDK-only dependency graph checks and standalone analyzer are documented in
+[Static GAMA Dependencies Analysis](gama.ui.devtools/README_DEPENDENCIES_GRAPH.md).

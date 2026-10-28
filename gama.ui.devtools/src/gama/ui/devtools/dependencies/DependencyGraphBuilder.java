@@ -3,19 +3,16 @@ package gama.ui.devtools.dependencies;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.InputStream;
-import java.io.Writer;
-import java.io.StringWriter;
-import java.io.FileReader;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.InvalidPathException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 
 import java.util.List;
 import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
@@ -28,26 +25,20 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.net.URI;
 
-import org.jgrapht.*;
-import org.jgrapht.graph.*;
-import org.jgrapht.nio.*;
-import org.jgrapht.nio.dot.*;
-import org.jgrapht.traverse.*;
-
-
 public class DependencyGraphBuilder {
 
-    private static String servicePathStr = Path.of("META-INF/services").toString();
+    private static final String servicePathStr = "META-INF/services/";
 
     /**
      * Location of the native java dependency analyzer executable
      */
-    private static String jdepsLocation = Path.of(System.getProperty("java.home"),"bin","jdeps").toString();
+    private static final String jdepsLocation = Path.of(System.getProperty("java.home"), "bin",
+            System.getProperty("os.name").startsWith("Windows") ? "jdeps.exe" : "jdeps").toString();
 
     /**
      * Map linking
      */
-    private Map<String,Path> librariesNameToPath = null;
+    private Map<String,Path> librariesNameToPath = new LinkedHashMap<>();
 
     /**
      * libraries
@@ -55,32 +46,28 @@ public class DependencyGraphBuilder {
     private Set<Path> libraries = null;
 
     /**
-     * (DirectedPseudograph	directed self-loops multiple-edges)
      * X -> Y means X imports Y
      */
-    private Graph<String,DefaultEdge> dependenciesGraph = null;
+    private DependencyGraph dependenciesGraph = null;
 
     /**
-     * (DirectedPseudograph	directed self-loops multiple-edges)
      * X -> Y means X is imported by Y
      */
-    private EdgeReversedGraph<String,DefaultEdge> importsGraph = null;
+    private DependencyGraph importsGraph = null;
 
      /**
-     * (DirectedPseudograph	directed self-loops multiple-edges)
      * X -> Y means X is consuming  a service provided by Y
      * 
      * successors of X are its providers
      */   
-    private Graph<String,DefaultEdge> serviceConsumingGraph = null;
+    private DependencyGraph serviceConsumingGraph = null;
 
      /**
-     * (DirectedPseudograph	directed self-loops multiple-edges)
      * X -> Y means X is providing a service consumed by Y
      * 
      * successors of X are its consumers
      */   
-    private Graph<String,DefaultEdge> serviceProvidingGraph = null;
+    private DependencyGraph serviceProvidingGraph = null;
 
     /**
      * Set of all the known services
@@ -98,7 +85,7 @@ public class DependencyGraphBuilder {
     private Map<String,Set<String>> libraryToServicesMap;
 
     public DependencyGraphBuilder() {
-        libraries = new HashSet<Path>();
+        libraries = new LinkedHashSet<Path>();
         services = new HashSet<String>();
         serviceToLibraryMap = new HashMap<String,Set<String>>();
         libraryToServicesMap = new HashMap<String,Set<String>>();
@@ -106,33 +93,37 @@ public class DependencyGraphBuilder {
 
     /**
      * Generate the dependency Graph
-     * (DirectedPseudograph	directed self-loops multiple-edges)
      * 
      * @param verbose
      *              if true, prints the dependencies relationships in the standard output;
      * 
-     * @return boolean success value of the operation
      */
     public void generate(boolean verbose) {
 
-        dependenciesGraph = new DirectedPseudograph<>(DefaultEdge.class);
+        DependencyGraph graph = new DependencyGraph();
+        librariesNameToPath.keySet().forEach(graph::addVertex);
+        if (libraries.isEmpty()) {
+            dependenciesGraph = graph;
+            importsGraph = graph.reversed();
+            return;
+        }
 
         List<String> arguments = libraries.stream()
             .map(p -> p.toString())
             .collect(Collectors.toCollection(LinkedList::new));
-
-        librariesNameToPath.keySet().forEach(filename -> dependenciesGraph.addVertex(filename));
 
         arguments.addFirst("--recursive");
         arguments.addFirst("base");
         arguments.addFirst("--multi-release");
         arguments.addFirst(jdepsLocation);
 
-        ProcessBuilder pb = new ProcessBuilder(arguments.toArray(new String[0]));
+        ProcessBuilder pb = new ProcessBuilder(arguments).redirectErrorStream(true);
+        Process process = null;
 
         try {
 
-            Process process = pb.start();
+            process = pb.start();
+            StringBuilder diagnostics = new StringBuilder();
 
             try (BufferedReader reader =
                     new BufferedReader(
@@ -142,36 +133,47 @@ public class DependencyGraphBuilder {
 
                 while ((line = reader.readLine()) != null) {
 
-                    if (line.charAt(0) == ' ')
+                    if (line.isBlank() || Character.isWhitespace(line.charAt(0)))
                         continue;
-                    
-                    Path dependencyPath = Path.of(line.replaceAll(".*->\s*",""));
+
+                    int arrow = line.indexOf(" -> ");
+                    if (arrow < 0) {
+                        diagnostics.append(line).append('\n');
+                        continue;
+                    }
+                    Path dependencyPath = Path.of(line.substring(arrow + 4).strip());
                     
                     if (! Files.exists(dependencyPath))
                         continue;
 
-                    String importer = line.replaceAll("\s*->.*","");
+                    String importer = line.substring(0, arrow).strip();
 
-                    dependenciesGraph.addEdge(importer,dependencyPath.getFileName().toString());
+                    graph.addEdge(importer, dependencyPath.getFileName().toString());
 
                     if(verbose)
                         System.out.println(line);
                 }
             }
 
-            importsGraph = new EdgeReversedGraph<String,DefaultEdge>(dependenciesGraph);
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new IllegalStateException("jdeps failed (exit " + exitCode + "): " + diagnostics);
+            }
+            dependenciesGraph = graph;
+            importsGraph = graph.reversed();
 
-            process.waitFor();
-
-        } catch (Exception e) {
-            throw new RuntimeException(
-                    "Failed to execute jdeps on " + libraries.toString(), e);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to execute jdeps on " + libraries, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while running jdeps", e);
+        } finally {
+            if (process != null && process.isAlive()) process.destroy();
         }
     }
 
     /**
      * Generate the dependency Graph
-     * (DirectedPseudograph	directed self-loops multiple-edges)
      */
     public void generate() {
         generate(false);
@@ -192,8 +194,7 @@ public class DependencyGraphBuilder {
         path = path.toAbsolutePath();
 
         if(! Files.isDirectory(path)) {
-            System.err.println("error : " + path + " is not a directory");
-            return false;
+            throw new IllegalArgumentException("Not a directory: " + path);
         }
 
         try (Stream<Path> stream = Files.walk(path)) {
@@ -201,10 +202,8 @@ public class DependencyGraphBuilder {
             final Set<Path> foundLibraries =  stream
                     .filter(p -> p.toString().endsWith(".jar")
                                 || Files.exists(p.resolve("META-INF/MANIFEST.MF")))
-                    .collect(Collectors.toSet());
-    
-            if(librariesNameToPath == null)
-                librariesNameToPath = new HashMap<String,Path>();
+                    .sorted()
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
 
             this.libraries.addAll(foundLibraries);
             processLibrariesNames();
@@ -213,8 +212,7 @@ public class DependencyGraphBuilder {
 
         } catch (IOException e)
         {
-            e.printStackTrace();
-            return false;
+            throw new UncheckedIOException("Cannot resolve libraries in " + path, e);
         }
         
     }
@@ -232,13 +230,7 @@ public class DependencyGraphBuilder {
      * @return boolean success value of the operation
      */
     public boolean resolveLibrariesInDirectory(String pathStr) {
-        try {
-            return resolveLibrariesInDirectory(Path.of(pathStr));
-        } catch (InvalidPathException e) 
-        {
-            e.printStackTrace();
-            return false;
-        }
+        return resolveLibrariesInDirectory(Path.of(pathStr));
     }
 
     /**
@@ -248,7 +240,7 @@ public class DependencyGraphBuilder {
      *                Set<Path> of libraries
      */
     public void setLibraries(Set<Path> libraries) {
-        this.libraries = new HashSet<Path>(libraries);
+        this.libraries = new LinkedHashSet<Path>(libraries);
         processLibrariesNames();
     }
 
@@ -262,7 +254,9 @@ public class DependencyGraphBuilder {
      */
     public boolean addLibrary(Path library)
     {
-        return libraries.add(library);
+        boolean added = libraries.add(library);
+        if (added) processLibrariesNames();
+        return added;
     }
 
     /**
@@ -275,14 +269,24 @@ public class DependencyGraphBuilder {
      */
     public boolean addLibraries(Set<Path> libraries)
     {
-        return libraries.addAll(libraries);
+        boolean added = this.libraries.addAll(libraries);
+        if (added) processLibrariesNames();
+        return added;
     }
 
     /**
      * Associate every library's name to its Path
     */    
     public void processLibrariesNames(){
+        librariesNameToPath.clear();
         libraries.forEach(p -> librariesNameToPath.put(p.getFileName().toString(),p));
+        dependenciesGraph = null;
+        importsGraph = null;
+        serviceConsumingGraph = null;
+        serviceProvidingGraph = null;
+        services.clear();
+        serviceToLibraryMap.clear();
+        libraryToServicesMap.clear();
     }
 
     /**
@@ -296,25 +300,13 @@ public class DependencyGraphBuilder {
     public boolean exportGraph(Path outputPath)
     {
         try {
-            DOTExporter<String, DefaultEdge> exporter =
-                new DOTExporter<>();
-
-            exporter.setVertexAttributeProvider((v) -> {
-                Map<String, Attribute> map = new LinkedHashMap<>();
-                map.put("label", DefaultAttribute.createAttribute(v.toString()));
-                return map;
-            });
-            
-            Writer writer = new StringWriter();
-            exporter.exportGraph(this.getDependenciesGraph(), writer);
-            Files.writeString(outputPath,writer.toString());
+            DependencyGraphDot.write(getDependenciesGraph(), outputPath);
 
             return true;
 
         } catch (IOException e)
         {
-            e.printStackTrace();
-            return false;
+            throw new UncheckedIOException("Cannot export dependency graph to " + outputPath, e);
         }
     }
 
@@ -328,13 +320,7 @@ public class DependencyGraphBuilder {
      * @return success boolean value
     */  
     public boolean exportGraph(String outputPathStr) {
-        try {
-            return exportGraph(Path.of(outputPathStr));
-        } catch (InvalidPathException e) 
-        {
-            e.printStackTrace();
-            return false;
-        }
+        return exportGraph(Path.of(outputPathStr));
     }
 
     /**
@@ -343,7 +329,7 @@ public class DependencyGraphBuilder {
      * 
      * @return the Dependency Graph
     */
-    public Graph<String,DefaultEdge> getDependenciesGraph() {
+    public DependencyGraph getDependenciesGraph() {
         if (dependenciesGraph == null)
             generate();
 
@@ -356,7 +342,7 @@ public class DependencyGraphBuilder {
      * 
      * @return the Imports Graph
     */
-    public Graph<String,DefaultEdge> getImportsGraph() {
+    public DependencyGraph getImportsGraph() {
         if (importsGraph == null)
             generate();
 
@@ -368,7 +354,7 @@ public class DependencyGraphBuilder {
      * @return Set<Path>
     */
     public Set<Path> getLibraries() {
-        return libraries;
+        return Collections.unmodifiableSet(libraries);
     }
 
     /**
@@ -387,7 +373,7 @@ public class DependencyGraphBuilder {
      * @return the list of libraries (names) importing the input library
     */
     public Set<String> getImporters(String name) {
-        return getSuccessorsRecursive(importsGraph,name);
+        return getImportsGraph().reachableFrom(name);
     }
 
     /**
@@ -398,56 +384,22 @@ public class DependencyGraphBuilder {
      * @return the list of libraries (names) imported by the input library
     */
     public Set<String> getDependencies(String name) {
-        return getSuccessorsRecursive(dependenciesGraph,name);
-    }
-
-    /**
-     * return the list of all successors of a vertex of the target graph
-     * recuresively (including successors of direct successors... etc)
-     * 
-     * @param graph
-     *            the target graph
-     * @param name
-     *           the target vertex
-     * 
-     * @return the list of libraries (names) importing the input library
-    */
-    private static Set<String> getSuccessorsRecursive(Graph<String,DefaultEdge> graph, String name)
-    {
-        Set<String> successors = new HashSet<>();
-        
-        BreadthFirstIterator<String, DefaultEdge> iterator = new BreadthFirstIterator<>(graph, name);
-        
-        if (iterator.hasNext()) {
-            iterator.next(); 
-        }
-        
-        while (iterator.hasNext()) {
-            successors.add(iterator.next());
-        }
-        
-        return successors;        
+        return getDependenciesGraph().reachableFrom(name);
     }
 
 
     public Set<String> getDirectDependencies(String library)
     {
-        if (! getDependenciesGraph().vertexSet().contains(library))
-            return null;
-
-        return new HashSet<String>(Graphs.successorListOf(getDependenciesGraph(),library));
+        return new LinkedHashSet<>(getDependenciesGraph().successorsOf(library));
     }
 
     public Set<String> getDirectImporters(String library)
     {
-        if (! getImportsGraph().vertexSet().contains(library))
-            return null;
-
-        return new HashSet<String>(Graphs.successorListOf(getImportsGraph(),library));
+        return new LinkedHashSet<>(getImportsGraph().successorsOf(library));
     }
 
     /**
-     * Load a graph from a dot format graph file
+     * Load a flat directed DOT graph, replacing paths and service metadata with empty state.
      * @param dotFilePathStr
      *                     Swtring representing the path to the .dot graph
      * 
@@ -455,44 +407,20 @@ public class DependencyGraphBuilder {
      */
     public boolean fromDot(String dotFilePathStr)
     {
-        dependenciesGraph = new DirectedPseudograph<String,DefaultEdge>(DefaultEdge.class);
-
-        DOTImporter<String, DefaultEdge> importer = new DOTImporter<>();
-        
-        Map<String, String> labelMap = new HashMap<>(); 
-
-        importer.addVertexAttributeConsumer((pair, attribute) -> {
-            String vertex = pair.getFirst();
-            String attributeName = pair.getSecond();
-            String attributeValue = attribute.getValue();
-
-            // Track the specific human-readable 'label' if it exists
-            if ("label".equals(attributeName)) {
-                labelMap.put(vertex, attributeValue);
-            }
-        });
-
-        importer.setVertexFactory(label -> label);
-
         try {
-            // retrieving the labels (init the labelMap)
-            FileReader reader = new FileReader(dotFilePathStr);
-            importer.importGraph(new DirectedPseudograph<String,DefaultEdge>(DefaultEdge.class), reader);
-            reader.close();
-
-            // actually reading the graph
-            reader = new FileReader(dotFilePathStr);
-            importer.setVertexFactory(label -> labelMap.getOrDefault(label,"no label found"));
-            importer.importGraph(dependenciesGraph, reader);
-            reader.close();
-
-            importsGraph = new EdgeReversedGraph<String,DefaultEdge>(dependenciesGraph);
+            DependencyGraph graph = DependencyGraphDot.read(Path.of(dotFilePathStr));
+            libraries.clear();
+            processLibrariesNames();
+            dependenciesGraph = graph;
+            importsGraph = graph.reversed();
+            serviceConsumingGraph = new DependencyGraph();
+            graph.vertexSet().forEach(serviceConsumingGraph::addVertex);
+            serviceProvidingGraph = serviceConsumingGraph.reversed();
 
             return true;
 
-        } catch (IOException | ImportException e) {
-            e.printStackTrace();
-            return false;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Cannot import dependency graph from " + dotFilePathStr, e);
         }
     }
 
@@ -517,6 +445,11 @@ public class DependencyGraphBuilder {
      */
     public void listServices()
     {
+        services.clear();
+        serviceToLibraryMap.clear();
+        libraryToServicesMap.clear();
+        serviceConsumingGraph = null;
+        serviceProvidingGraph = null;
         for(Path library : libraries)
         {
             final String filename = library.getFileName().toString();
@@ -567,13 +500,11 @@ public class DependencyGraphBuilder {
      */
     public void checkServicesDependenciesRelations()
     {
-        serviceConsumingGraph = new DirectedPseudograph<>(DefaultEdge.class); 
-        serviceProvidingGraph = new DirectedPseudograph<>(DefaultEdge.class); 
+        serviceConsumingGraph = new DependencyGraph();
+        serviceProvidingGraph = serviceConsumingGraph.reversed();
 
-        librariesNameToPath.keySet().forEach(filename -> {
-            serviceConsumingGraph.addVertex(filename);
-            serviceProvidingGraph.addVertex(filename);
-        });
+        Set<String> names = dependenciesGraph == null ? librariesNameToPath.keySet() : dependenciesGraph.vertexSet();
+        names.forEach(serviceConsumingGraph::addVertex);
 
         for (Path library : libraries)
         {
@@ -608,7 +539,6 @@ public class DependencyGraphBuilder {
                         {
                             serviceToLibraryMap.get(service).forEach(provider -> {
                                 serviceConsumingGraph.addEdge(filename,provider);
-                                serviceProvidingGraph.addEdge(provider,filename);
                             });
                         }
                     }
@@ -639,7 +569,7 @@ public class DependencyGraphBuilder {
             checkServicesDependenciesRelations();
         }
 
-        return getSuccessorsRecursive(serviceConsumingGraph,library);
+        return serviceConsumingGraph.reachableFrom(library);
     }
 
     /**
@@ -659,7 +589,7 @@ public class DependencyGraphBuilder {
             checkServicesDependenciesRelations();
         }
 
-        return getSuccessorsRecursive(serviceProvidingGraph,library);
+        return serviceProvidingGraph.reachableFrom(library);
     }
 
     /**
@@ -679,7 +609,7 @@ public class DependencyGraphBuilder {
             checkServicesDependenciesRelations();
         }
 
-        return new HashSet<String>(Graphs.successorListOf(serviceConsumingGraph,library));
+        return new LinkedHashSet<>(serviceConsumingGraph.successorsOf(library));
     }
 
     /**
@@ -699,7 +629,7 @@ public class DependencyGraphBuilder {
             checkServicesDependenciesRelations();
         }
         
-        return new HashSet<String>(Graphs.successorListOf(serviceProvidingGraph,library));
+        return new LinkedHashSet<>(serviceProvidingGraph.successorsOf(library));
     }
 
 

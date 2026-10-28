@@ -23,9 +23,6 @@
 hs_err_pid*
 replay_pid*
 
-# Embedded libraries of the plugin
-!gama.ui.devtools/libs/*.jar
-
 # Eclipse / Maven
 target/
 bin/
