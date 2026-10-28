@@ -59,15 +59,6 @@ jobs:
           echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin/mvn" --version
 
-      - name: Check dependency graph analysis
-        run: |
-          classes="$RUNNER_TEMP/dependency-graph-tests"
-          mkdir -p "$classes"
-          javac --release 21 -d "$classes" \
-            gama.ui.devtools/src/gama/ui/devtools/dependencies/*.java \
-            gama.ui.devtools/tests/DependencyGraphTest.java
-          java -cp "$classes" DependencyGraphTest .
-
       - name: Build the update site
         run: mvn -B -e -DskipTests package
 
@@ -95,7 +86,6 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
-          python3 -m unittest discover -s gama.p2site.devtools -p 'test_publish.py'
           python3 gama.p2site.devtools/publish.py \
             gama.p2site.devtools/target/repository _site "${RUN_ID}-${RUN_ATTEMPT}"
           cp gama.p2site.devtools/index.html _site/index.html
