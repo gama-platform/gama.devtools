@@ -7,7 +7,7 @@ An Eclipse plugin for the developers of GAMA. It adds a **GAMA** menu to the men
 Install it in the Eclipse IDE used to develop GAMA, not in GAMA itself. This Eclipse needs JDT and PDE and must run on Java 21 or newer. Eclipse can use its bundled JustJ Java 21 runtime; configure a separate JDK 25 under *Preferences > Java > Installed JREs* for compiling and running GAMA.
 
 1. In Eclipse, choose *Help > Install New Software...*
-2. Add the update site `https://gama-platform.org/gama/devtools/`.
+2. Add the update site `https://gama-platform.org/gama.devtools/`.
 3. Select **GAMA Developer Tools**, then restart Eclipse.
 
 Use **GAMA > Update...** to check the developer tools update site and install the latest
@@ -19,17 +19,16 @@ installation; a license prompt is shown only for licenses not already accepted. 
 installation or update before using this command. Workspace launches and plugins copied into `dropins`
 must first be installed as the feature from the update site to use this action.
 
-The update site is built from `gama.p2site.devtools`, which contains only `gama.feature.devtools`. The workflow `.github/workflows/publish-devtools.yaml` publishes it on every change of the developer tools on `main`. Eclipse supplies the JDT/PDE, EGit/JGit and Gson dependencies; the jgrapht jars are embedded in `libs/`. To try local changes without installing, launch a runtime Eclipse from the workspace.
+The update site is built from `gama.p2site.devtools`, which contains only `gama.feature.devtools`. The workflow `.github/workflows/publish-devtools.yaml` of [gama-platform/gama.devtools](https://github.com/gama-platform/gama.devtools) publishes it on every change of the developer tools on `main`. Eclipse supplies the JDT/PDE, EGit/JGit and Gson dependencies; the jgrapht jars are embedded in `libs/`. To try local changes without installing, launch a runtime Eclipse from the workspace.
+
+Build it locally from the repository root with `mvn -DskipTests package` (JDK 21 or newer, Maven 3.9). It does
+not need the GAMA sources: the update site is produced in `gama.p2site.devtools/target/repository`.
 
 The public URL is a composite p2 repository. Each workflow run adds an immutable child at
-`devtools/releases/<run-id>-<attempt>/`; previous builds are retained on the `devtools-site` branch and included
+`releases/<run-id>-<attempt>/`; previous builds are retained on the `devtools-site` branch and included
 in subsequent Pages deployments. Eclipse can therefore finish an installation using cached metadata even
 after a newer build is published. Do not delete that branch or prune old releases while clients may need them.
 Publishing requires permission for the workflow token to push to that branch; branch rules must allow it.
-On the first run of this publishing scheme, the latest successful main-branch Pages artifact is restored
-if available. A previous flat repository is migrated into a child while its original artifact URLs remain
-available. If that artifact has expired, the workflow fails rather than silently discarding the old site;
-restore a copy of the published site to the `devtools-site` branch before retrying.
 
 Local `target/repository` builds remain standalone repositories and are replaced by `clean`. For repeated
 local installation, use a uniquely named ZIP for each build rather than a cached directory URL.
@@ -118,10 +117,11 @@ Explorer layout changes and JDT profile import are isolated in `install/Workspac
 not expose public APIs for all of these operations, so that adapter uses JDT's internal profile/Package
 Explorer APIs and must be checked when updating the supported Eclipse platform.
 
-The project discovery/project-set regression test runs without Eclipse:
+The project discovery/project-set regression test runs without Eclipse, from the root of this repository,
+given a checkout of `gama-platform/gama`:
 ```
 javac -d /tmp/gama-install-tests gama.ui.devtools/src/gama/ui/devtools/install/InstallModel.java gama.ui.devtools/tests/InstallModelTest.java
-java -cp /tmp/gama-install-tests InstallModelTest .
+java -cp /tmp/gama-install-tests InstallModelTest /path/to/gama .
 ```
 `tests/RepositoryCheckoutTest.java` additionally exercises cloning, fast-forward updates, branch selection,
 cancellation and refusal to overwrite local edits/commits, using only disposable local repositories. Compile
@@ -156,10 +156,10 @@ New product settings are picked up when generating defaults, not silently applie
 These launch commands require the Eclipse Debug, Java launching and PDE launching bundles, installed as
 devtools dependencies. They use public Eclipse APIs rather than version-specific PDE implementation classes.
 
-The product-settings regression test runs without Eclipse, from the repository root:
+The product-settings regression test runs without Eclipse, given a checkout of `gama-platform/gama`:
 ```
 javac -d /tmp/gama-launch-tests gama.ui.devtools/src/gama/ui/devtools/launch/ProductLaunchSpec.java gama.ui.devtools/tests/ProductLaunchSpecTest.java
-java -cp /tmp/gama-launch-tests ProductLaunchSpecTest .
+java -cp /tmp/gama-launch-tests ProductLaunchSpecTest /path/to/gama
 ```
 
 ## Updating Java headers

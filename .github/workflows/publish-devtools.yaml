@@ -1,9 +1,9 @@
 #
 # Builds the update site of the GAMA Developer Tools (gama.p2site.devtools) and publishes it on the GitHub Pages
-# of this repository: https://gama-platform.org/gama/devtools/
+# of this repository: https://gama-platform.org/gama.devtools/
 #
 # Requires Settings > Pages > Build and deployment > Source: "GitHub Actions" (enabled). The organisation domain
-# redirects https://gama-platform.github.io/gama/ to https://gama-platform.org/gama/.
+# redirects https://gama-platform.github.io/gama.devtools/ to https://gama-platform.org/gama.devtools/.
 #
 
 name: "Publish GAMA Developer Tools"
@@ -16,6 +16,7 @@ on:
       - 'gama.ui.devtools/**'
       - 'gama.feature.devtools/**'
       - 'gama.p2site.devtools/**'
+      - 'pom.xml'
       - '.github/workflows/publish-devtools.yaml'
   workflow_dispatch:
 
@@ -33,7 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: read
     steps:
       - uses: actions/checkout@v6
 
@@ -59,16 +59,8 @@ jobs:
           echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin/mvn" --version
 
-      # The parent pom declares the GAML annotation processor for every module
-      - name: Install the annotations and the annotation processor
-        run: |
-          mvn -B -q -f gama.annotations/pom.xml install -DskipTests -Dmaven.build.cache.enabled=false
-          mvn -B -q -f gama.processor/pom.xml install -DskipTests -Dmaven.build.cache.enabled=false
-
       - name: Build the update site
-        run: |
-          mvn -B -e -f gama.parent/pom.xml -pl ../gama.ui.devtools,../gama.feature.devtools,../gama.p2site.devtools \
-            -DskipTests -Dmaven.build.cache.enabled=false package
+        run: mvn -B -e -DskipTests package
 
       - name: Restore the published site
         env:
@@ -87,13 +79,6 @@ jobs:
             git -C _site checkout -B devtools-site FETCH_HEAD
           elif [ "$status" -ne 2 ]; then
             exit "$status"
-          else
-            previous=$(gh run list --repo "$REPOSITORY" --workflow publish-devtools.yaml \
-              --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
-            if [ -n "$previous" ]; then
-              gh run download "$previous" --repo "$REPOSITORY" --name github-pages --dir /tmp/previous-pages
-              tar -xf /tmp/previous-pages/artifact.tar -C _site
-            fi
           fi
 
       - name: Assemble the versioned composite site
@@ -103,14 +88,8 @@ jobs:
         run: |
           python3 -m unittest discover -s gama.p2site.devtools -p 'test_publish.py'
           python3 gama.p2site.devtools/publish.py \
-            gama.p2site.devtools/target/repository _site/devtools "${RUN_ID}-${RUN_ATTEMPT}"
-          cp gama.p2site.devtools/index.html _site/devtools/index.html
-          cat > _site/index.html <<'EOF'
-          <!DOCTYPE html>
-          <html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=devtools/">
-          <title>GAMA</title></head>
-          <body><a href="devtools/">GAMA Developer Tools update site</a></body></html>
-          EOF
+            gama.p2site.devtools/target/repository _site "${RUN_ID}-${RUN_ATTEMPT}"
+          cp gama.p2site.devtools/index.html _site/index.html
 
       - name: Retain published repositories
         env:
@@ -131,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}devtools/
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4

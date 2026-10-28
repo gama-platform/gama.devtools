@@ -13,7 +13,9 @@ import gama.ui.devtools.install.InstallModel.Repository;
 public class InstallModelTest {
 
 	public static void main(final String[] args) throws Exception {
+		// First argument: a checkout of gama-platform/gama; second (optional): this repository.
 		Path repository = Path.of(args.length == 0 ? "." : args[0]).toAbsolutePath().normalize();
+		Path devtools = Path.of(args.length < 2 ? "." : args[1]).toAbsolutePath().normalize();
 		Repository source = new Repository("gama", Kind.CORE.url, Kind.CORE.branch);
 		var actual = InstallModel.projects(repository, source, Kind.CORE);
 		check(actual.stream().anyMatch(p -> p.name().equals("gama.core") && p.recommended()), "Core module selected");
@@ -25,7 +27,7 @@ public class InstallModelTest {
 		}
 		check(actual.stream().noneMatch(p -> p.directory().getNameCount() > repository.getNameCount() + 1),
 				"Only top-level core projects");
-		try (var input = Files.newInputStream(repository.resolve("gama.ui.devtools/utils/" + InstallModel.PROJECT_SETS))) {
+		try (var input = Files.newInputStream(devtools.resolve("gama.ui.devtools/utils/" + InstallModel.PROJECT_SETS))) {
 			var sets = InstallModel.workingSets(input);
 			check(sets.get("==================== CORE").containsAll(List.of("gama.core", "gama.api")),
 					"Java project handles parsed");

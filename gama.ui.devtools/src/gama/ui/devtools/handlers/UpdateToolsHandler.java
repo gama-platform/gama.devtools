@@ -46,7 +46,7 @@ public class UpdateToolsHandler extends AbstractHandler {
 	private static final String PLUGIN_ID = "gama.ui.devtools";
 	private static final String FEATURE_ID = "gama.feature.devtools.feature.group";
 	private static final String TITLE = "Update GAMA tools";
-	private static final URI REPOSITORY = URI.create("https://gama-platform.org/gama/devtools/");
+	private static final URI REPOSITORY = URI.create("https://gama-platform.org/gama.devtools/");
 	private static final AtomicBoolean UPDATING = new AtomicBoolean();
 
 	@Override
