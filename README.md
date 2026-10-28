@@ -1,2 +1,2 @@
 # gama.devtools
-Eclipse développement tools for GAMA
+Eclipse development tools for GAMA
