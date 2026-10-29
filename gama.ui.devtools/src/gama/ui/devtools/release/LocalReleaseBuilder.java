@@ -11,8 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -27,7 +25,6 @@ import java.util.function.Consumer;
 public final class LocalReleaseBuilder {
 
 	private static final Set<String> GENERATED = Set.of(".git", ".metadata", "target", "bin");
-	private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
 	private LocalReleaseBuilder() {}
 
@@ -128,7 +125,6 @@ public final class LocalReleaseBuilder {
 				: plan.target().windows() ? "Gama.exe" : "Gama");
 		if (!Files.isRegularFile(executable)) throw new IOException("The native product was not produced: " + executable);
 		Path staging = Files.createTempDirectory(plan.destination(), ".gama-release-");
-		boolean published = false;
 		try {
 			copyTree(product, staging, false, canceled);
 			// Cocoa loads the JVM as a bundle: copying only Contents/Home breaks the native launcher.
@@ -149,14 +145,17 @@ public final class LocalReleaseBuilder {
 					throw new IOException("Cannot make the headless launcher executable.");
 				}
 			}
-			Files.copy(log, staging.resolve("build.log"));
+			Files.copy(log, staging.resolve(plan.target().mac() ? "Gama.app/Contents/build.log" : "build.log"));
 			checkCanceled(canceled);
-			Path destination = plan.destination().resolve("GAMA-local-" + plan.target().id() + "-" + STAMP.format(LocalDateTime.now()));
-			Files.move(staging, destination);
-			published = true;
+			Path destination = plan.releasePath();
+			if (Files.exists(destination, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+				throw new IOException("A release already exists at " + destination
+						+ ". Move it away or choose another destination.");
+			}
+			Files.move(plan.target().mac() ? staging.resolve("Gama.app") : staging, destination);
 			return destination;
 		} finally {
-			if (!published) deleteTree(staging);
+			deleteTree(staging);
 		}
 	}
 

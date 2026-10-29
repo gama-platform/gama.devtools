@@ -3,6 +3,7 @@ package gama.ui.devtools.release;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +23,8 @@ import gama.ui.devtools.install.InstallModel;
 
 /** GAMA's three-stage build and native-only Tycho configuration, independent of Eclipse. */
 public record LocalReleasePlan(Path source, Path jdk, Path destination, Target target) {
+
+	public Path releasePath() { return destination.resolve(target.mac() ? "Gama.app" : "Gama"); }
 
 	public record Target(String os, String ws, String arch) {
 		public Target {
@@ -52,6 +55,10 @@ public record LocalReleasePlan(Path source, Path jdk, Path destination, Target t
 		}
 		if (destination.toRealPath().startsWith(source.toRealPath())) {
 			throw new IOException("Save the release outside the GAMA source checkout.");
+		}
+		if (Files.exists(releasePath(), LinkOption.NOFOLLOW_LINKS)) {
+			throw new IOException("A release already exists at " + releasePath()
+					+ ". Move it away or choose another destination.");
 		}
 		Document parent = read(source.resolve("gama.parent/pom.xml"));
 		if (!text(parent.getDocumentElement(), "properties", "jdk.version").equals("25")) {

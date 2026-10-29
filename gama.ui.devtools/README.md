@@ -111,12 +111,16 @@ failure. The first build can take considerable time and disk space: it needs roo
 snapshot, Maven dependencies, product build outputs, and the final product with a copied JDK.
 Temporary snapshots and incomplete destination folders are removed when the job finishes.
 
-On success, the chosen destination contains a new `GAMA-local-<os>.<ws>.<arch>-<timestamp>` folder
-with a runnable application (`Gama.app` on macOS, `Gama.exe` on Windows, `Gama` on Linux), the selected
-JDK, and `build.log`. The success dialog offers **Run** as the rightmost, default button to launch
-the produced application, or **Ok** to leave it saved without launching. Launch output is written to `launch.log` in the
-release folder; on macOS the app is opened through Launch Services and system security prompts still apply.
-Existing release folders are never overwritten. The launcher and supplied
+On success, `Gama.app` is placed directly in the chosen destination on macOS.
+On Windows and Linux, a `Gama` folder is placed there, containing the launcher
+(`Gama.exe` on Windows, `Gama` on Linux) and the selected JDK.
+The success dialog says "GAMA produced in [folder path]" and offers **Close** / **Run**,
+from left to right, with **Run** selected by default.
+Build and launch logs are saved as `build.log` and `launch.log` inside `Gama.app/Contents`
+on macOS, or inside the `Gama` folder on Windows/Linux. On macOS the app is opened through
+Launch Services and system security prompts still apply.
+Existing releases are never overwritten: move an existing `Gama.app` or `Gama` folder away,
+or choose another destination before building. The launcher and supplied
 headless scripts use the bundled JDK, so the folder is independent of Eclipse and the original JDK
 installation. Keep the whole folder when moving it. This is an unsigned local build, not a signed
 or notarized release; macOS security prompts may require explicitly allowing the app.

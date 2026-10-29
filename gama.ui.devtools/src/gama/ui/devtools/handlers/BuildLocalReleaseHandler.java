@@ -81,8 +81,8 @@ public final class BuildLocalReleaseHandler extends AbstractHandler {
 					display.asyncExec(() -> {
 						if (shell.isDisposed()) return;
 						MessageDialog success = new MessageDialog(shell, TITLE, null,
-								"GAMA is ready to run.\n\nSaved in:\n" + release,
-								MessageDialog.INFORMATION, new String[] { "Ok", "Run" }, 1);
+								"GAMA produced in " + plan.destination(),
+								MessageDialog.INFORMATION, new String[] { "Close", "Run" }, 1);
 						if (success.open() == 1) launchRelease(release, target);
 					});
 					return Status.OK_STATUS;
@@ -112,12 +112,12 @@ public final class BuildLocalReleaseHandler extends AbstractHandler {
 
 	private static void launchRelease(Path release, LocalReleasePlan.Target target) {
 		Job launch = Job.create("Run local GAMA release", monitor -> {
-			Path log = release.resolve("launch.log");
+			Path log = release.resolve(target.mac() ? "Contents/launch.log" : "launch.log");
 			List<String> command = target.mac()
-					? List.of("/usr/bin/open", "-n", release.resolve("Gama.app").toString())
+					? List.of("/usr/bin/open", "-n", release.toString())
 					: List.of(release.resolve(target.windows() ? "Gama.exe" : "Gama").toString());
 			try {
-				Process process = new ProcessBuilder(command).directory(release.toFile())
+				Process process = new ProcessBuilder(command).directory((target.mac() ? release.getParent() : release).toFile())
 						.redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile())).start();
 				process.getOutputStream().close();
 				if (target.mac() && process.waitFor() != 0) {
