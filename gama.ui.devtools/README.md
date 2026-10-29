@@ -113,8 +113,8 @@ Temporary snapshots and incomplete destination folders are removed when the job 
 
 On success, the chosen destination contains a new `GAMA-local-<os>.<ws>.<arch>-<timestamp>` folder
 with a runnable application (`Gama.app` on macOS, `Gama.exe` on Windows, `Gama` on Linux), the selected
-JDK, and `build.log`. The success dialog offers **Run GAMA** to launch the produced application,
-or **Close** to leave it saved without launching. Launch output is written to `launch.log` in the
+JDK, and `build.log`. The success dialog offers **Run** as the rightmost, default button to launch
+the produced application, or **Ok** to leave it saved without launching. Launch output is written to `launch.log` in the
 release folder; on macOS the app is opened through Launch Services and system security prompts still apply.
 Existing release folders are never overwritten. The launcher and supplied
 headless scripts use the bundled JDK, so the folder is independent of Eclipse and the original JDK
