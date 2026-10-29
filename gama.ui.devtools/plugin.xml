@@ -175,11 +175,11 @@
                   <parameter name="gama.ui.devtools.installKind" value="COMMUNITY"/>
                </command>
             </menu>
-            <command commandId="gama.ui.devtools.reportIssue" style="push"/>
             <separator
                   name="additions"
-                  visible="false">
+                  visible="true">
             </separator>
+            <command commandId="gama.ui.devtools.reportIssue" style="push"/>
             <command commandId="gama.ui.devtools.updateTools" style="push"/>
          </menu>
       </menuContribution>
