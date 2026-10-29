@@ -10,7 +10,7 @@ Install it in the Eclipse IDE used to develop GAMA, not in GAMA itself. This Ecl
 2. Add the update site `https://gama-platform.org/gama.devtools/`.
 3. Select **GAMA Developer Tools**, then restart Eclipse.
 
-Use **GAMA > Update...** to check the developer tools update site and install the latest
+Use **GAMA > Update GAMA tools...** to check the developer tools update site and install the latest
 update directly, without Eclipse's software selection wizard. It updates only the installed developer
 tools feature, not the rest of Eclipse. If no update is available, a dialog says so. The check and
 installation run as cancellable background jobs; network and installation errors are reported rather
@@ -18,6 +18,13 @@ than treated as "no update". Eclipse still handles trust/signature prompts and r
 installation; a license prompt is shown only for licenses not already accepted. Finish any other software
 installation or update before using this command. Workspace launches and plugins copied into `dropins`
 must first be installed as the feature from the update site to use this action.
+
+The menu fetches a fresh composite release list, bypassing the mutable descriptor's HTTP cache, then
+checks the newest published feature directly in its immutable release repository. This avoids
+GitHub Pages' cached HTTPS metadata hiding a deployment that is already visible at the HTTP address.
+The up-to-date dialog shows both installed and latest published versions. If a newer version is
+published but p2 cannot offer it as an update, the command reports that discrepancy instead of
+claiming the tools are current.
 
 The update site is built from `gama.p2site.devtools`, which contains only `gama.feature.devtools`. The workflow `.github/workflows/publish-devtools.yaml` of [gama-platform/gama.devtools](https://github.com/gama-platform/gama.devtools) publishes it on every change of the developer tools on `main`. Eclipse supplies the JDT/PDE, EGit/JGit and Gson dependencies; dependency graph analysis uses only the JDK, with no embedded libraries. To try local changes without installing, launch a runtime Eclipse from the workspace.
 
@@ -35,29 +42,32 @@ local installation, use a uniquely named ZIP for each build rather than a cached
 
 ## Commands
 
-The **GAMA** menu contains, without headings or icons: the **Run...** submenu (Run UI / Run headless /
-Run tests, Debug UI / Debug headless, Configure...); **Clean all...**, **Build local release...**, with the **Search...**, **Repair...**
-and **Create...** submenus; then the **Install...** submenu and **Update...**.
-The **Create...** submenu lists all six creation wizards. They are also available in
+The **GAMA** menu contains, without headings or icons: the **Run GAMA** submenu
+(Configure..., followed by a separator, Run UI / Run headless / Run tests, a separator,
+Debug UI / Debug headless, then a separator and Build local release...);
+**Clean GAMA plugins**; **Search GAML keyword...** directly in the menu; the **Report**
+submenu (Native library dependencies / Missing annotations); **Repair GAMA plugins**
+and **Create GAMA artefacts** submenus; then **Install GAMA sources** and **Update GAMA tools...**.
+The **Create GAMA artefacts** submenu lists all six creation wizards. They are also available in
 *File > New > Other... > GAMA Development*.
 
 | Command | What it does |
 |---|---|
-| **Keyword implementations...** (`Ctrl/Cmd+Shift+Alt+K`) | Finds the Java code behind a GAML keyword (see below). |
-| **Run... > Run UI / Run headless / Run tests / Debug UI / Debug headless** | Launches workspace GAMA through editable PDE Eclipse Application configurations. |
-| **Run... > Configure...** | Associates each flavor with an existing configuration or generates a default; provides editing and confirmed restoration of defaults. |
-| **Clean all...** (`Cmd+B` on macOS, `Ctrl+B` on Windows/Linux) | Saves the editors, refreshes the whole workspace recursively from disk and automatically repairs the plugins configuration (see *Configuration checks*). Disables the annotation processor, deletes the `gaml/` folders and re-enables the processor. These steps only affect the GAMA plugins. Then runs a clean build and a full build of the whole workspace, and checks that every `GamlAdditions.java` was regenerated. The configuration is checked again afterwards: remaining problems appear in the Problems view, with quick fixes (`Ctrl/Cmd+1`). No dialog is shown and the job can be cancelled. |
+| **Search GAML keyword...** (`Ctrl/Cmd+Shift+Alt+K`) | Finds the Java code behind a GAML keyword (see below). |
+| **Run GAMA > Run UI / Run headless / Run tests / Debug UI / Debug headless** | Launches workspace GAMA through editable PDE Eclipse Application configurations. |
+| **Run GAMA > Configure...** | Associates each flavor with an existing configuration or generates a default; provides editing and confirmed restoration of defaults. |
+| **Clean GAMA plugins** (`Cmd+B` on macOS, `Ctrl+B` on Windows/Linux) | Saves the editors, refreshes the whole workspace recursively from disk and automatically repairs the plugins configuration (see *Configuration checks*). Disables the annotation processor, deletes the `gaml/` folders and re-enables the processor. These steps only affect the GAMA plugins. Then runs a clean build and a full build of the whole workspace, and checks that every `GamlAdditions.java` was regenerated. The configuration is checked again afterwards: remaining problems appear in the Problems view, with quick fixes (`Ctrl/Cmd+1`). No dialog is shown and the job can be cancelled. |
 | **Clean...** (context menu) | The same, limited to the GAMA plugins in the selection: only they are reset, cleaned and rebuilt. The initial refresh still covers the whole workspace. |
-| **Build local release...** | Builds a runnable GAMA folder for the current OS and architecture, using a privately managed Maven and including JDK 25. Choose the source checkout, JDK and destination (see below). |
+| **Run GAMA > Build local release...** | Builds a runnable GAMA folder for the current OS and architecture, using a privately managed Maven and including JDK 25. Choose the source checkout, JDK and destination (see below). |
 | **Rebuild annotation processor** | Regenerates `gama.processor/gama.processor.jar` from `Generate Processor.jardesc`. Use it after modifying `gama.processor` or `gama.annotations`. |
 | **Regenerate Xtext grammar** | Runs `gaml.grammar/src/gaml/grammar/generator/Generate_GAML_Artefacts.mwe2` to regenerate the GAML grammar artifacts. The `gaml.grammar`, `gaml.compiler` and `gama.ui.editor` projects must be open. |
 | **Update file headers** | Sets the GAMA version and copyright end year, updates existing headers and adds missing ones, with a mandatory per-file preview and undo. |
-| **Missing annotations...** | Builds a Markdown report from the warnings of the processor. It lists the undocumented GAML elements and the untested operators, per plugin. |
+| **Report > Missing annotations** | Builds a Markdown report from the warnings of the processor. It lists the undocumented GAML elements and the untested operators, per plugin. |
 | **Generate missing tests** | Writes `models/Tests/Untested Operators.gaml` in each selected plugin (or all of them). It contains one `test` stub per operator reported as not tested, with its Java signature. Stubs already in the file are kept. |
-| **Plugins dependencies...** | Runs `jdeps` on compiled bundles and libraries and produces an interactive HTML dependency explorer and DOT export. This needs a full JDK, but no graph library. See [Static GAMA Dependencies Analysis](README_DEPENDENCIES_GRAPH.md) for standalone use and DOT compatibility. |
-| **Update...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
-| **Create... > New GAMA Plugin / Skill / Operators / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
-| **Install... > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
+| **Report > Native library dependencies** | Runs `jdeps` on compiled bundles and libraries and produces an interactive HTML dependency explorer and DOT export. This needs a full JDK, but no graph library. See [Static GAMA Dependencies Analysis](README_DEPENDENCIES_GRAPH.md) for standalone use and DOT compatibility. |
+| **Update GAMA tools...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
+| **Create GAMA artefacts > New GAMA Plugin / Skill / Operators / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
+| **Install GAMA sources > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
 
 The Clean and Rebuild All shortcut takes precedence over Eclipse's standard Build All binding in the default
 key scheme. It always targets all GAMA plugins, regardless of selection. Explicit user bindings and more
@@ -65,9 +75,11 @@ specific editor bindings can still override it; configure these in *Preferences 
 
 ## Building a local GAMA release
 
-Choose **GAMA > Build local release...**, then select a complete GAMA source checkout and an existing
-destination directory **outside** that checkout. The checkout containing the workspace's `gama.parent`
-is suggested automatically. Eclipse prompts to save modified editors before starting. The build uses
+Choose **GAMA > Run GAMA > Build local release...**, then select a complete GAMA source checkout and JDK.
+Click **Build release...** to choose an existing destination directory **outside** that checkout;
+canceling the destination chooser leaves the build dialog open without starting a build.
+The checkout containing the workspace's `gama.parent` is suggested automatically, and the destination
+chooser remembers the previous destination. Eclipse prompts to save modified editors before starting. The build uses
 the saved files on disk, including local source changes; it does not fetch, switch branches, modify
 the checkout, or run the checkout's platform-wide packaging scripts.
 
@@ -99,14 +111,17 @@ Temporary snapshots and incomplete destination folders are removed when the job 
 
 On success, the chosen destination contains a new `GAMA-local-<os>.<ws>.<arch>-<timestamp>` folder
 with a runnable application (`Gama.app` on macOS, `Gama.exe` on Windows, `Gama` on Linux), the selected
-JDK, and `build.log`. Existing release folders are never overwritten. The launcher and supplied
+JDK, and `build.log`. The success dialog offers **Run GAMA** to launch the produced application,
+or **Close** to leave it saved without launching. Launch output is written to `launch.log` in the
+release folder; on macOS the app is opened through Launch Services and system security prompts still apply.
+Existing release folders are never overwritten. The launcher and supplied
 headless scripts use the bundled JDK, so the folder is independent of Eclipse and the original JDK
 installation. Keep the whole folder when moving it. This is an unsigned local build, not a signed
 or notarized release; macOS security prompts may require explicitly allowing the app.
 
 ## Installing source projects
 
-The **Install...** submenu provides three variants of the same wizard:
+The **Install GAMA sources** submenu provides three variants of the same wizard:
 
 - **Core plugins** uses `https://github.com/gama-platform/gama.git`, branch `main`. It lists top-level
   Eclipse projects, preselecting those listed in `gama.parent/pom.xml` plus `gama.parent`, including
@@ -166,7 +181,7 @@ and run it with JGit and Eclipse Core Runtime (and their dependencies) on the cl
 
 ## Running and debugging workspace GAMA
 
-The **GAMA > Run...** and **GAMA > Debug...** menus share three launch configurations. **GUI** opens GAMA,
+The run and debug commands in **GAMA > Run GAMA** share three launch configurations. **GUI** opens GAMA,
 **Headless...** asks for mode/arguments (for example, an XML experiment file and output directory, or
 `-batch experimentName "/path/model.gaml"`), and **Tests** generates a headless configuration with `-test`.
 Headless arguments are remembered; tests report to Eclipse's Console.
@@ -185,7 +200,7 @@ workspace launches. The product's `-data` argument is replaced by a separate run
 located beside the development workspace (`gama-runtime-gui`, `gama-runtime-headless`, `gama-runtime-tests`).
 They do not clear runtime workspaces automatically.
 
-**Run... > Configure...** lets you select each flavor and change its associated configuration. **Edit
+**Run GAMA > Configure...** lets you select each flavor and change its associated configuration. **Edit
 configuration...** opens Eclipse's standard launch properties, including JRE, memory, arguments and plugins.
 Existing configurations and customizations are never automatically rewritten. **Restore generated defaults...**
 asks for confirmation, then creates and selects a fresh configuration; the old configuration is retained.

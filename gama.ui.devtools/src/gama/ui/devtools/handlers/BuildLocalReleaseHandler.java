@@ -1,9 +1,11 @@
 package gama.ui.devtools.handlers;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -16,6 +18,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.window.Window;
 import org.eclipse.ui.console.ConsolePlugin;
 import org.eclipse.ui.console.IConsole;
@@ -77,10 +80,14 @@ public final class BuildLocalReleaseHandler extends AbstractHandler {
 					}, output::print);
 					output.println("\nRelease saved in " + release);
 					display.asyncExec(() -> {
-						if (!shell.isDisposed()) MessageDialog.openInformation(shell, TITLE,
+						if (shell.isDisposed()) return;
+						MessageDialog success = new MessageDialog(shell, TITLE, null,
 								"The local release was saved in:\n" + release + "\n\n"
 								+ "It includes JDK 25 and does not need Eclipse or Maven to run."
-								+ (target.mac() ? "\nThis is an unsigned local build, not a notarized distribution." : ""));
+								+ (target.mac() ? "\nThis is an unsigned local build, not a notarized distribution." : "")
+								+ "\n\nRun the produced application now?",
+								MessageDialog.INFORMATION, new String[] { "Run GAMA", IDialogConstants.CLOSE_LABEL }, 1);
+						if (success.open() == 0) launchRelease(release, target);
 					});
 					return Status.OK_STATUS;
 				} catch (CancellationException e) {
@@ -105,5 +112,34 @@ public final class BuildLocalReleaseHandler extends AbstractHandler {
 			MessageDialog.openError(shell, TITLE, e.getMessage());
 		}
 		return null;
+	}
+
+	private static void launchRelease(Path release, LocalReleasePlan.Target target) {
+		Job launch = Job.create("Run local GAMA release", monitor -> {
+			Path log = release.resolve("launch.log");
+			List<String> command = target.mac()
+					? List.of("/usr/bin/open", "-n", release.resolve("Gama.app").toString())
+					: List.of(release.resolve(target.windows() ? "Gama.exe" : "Gama").toString());
+			try {
+				Process process = new ProcessBuilder(command).directory(release.toFile())
+						.redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile())).start();
+				process.getOutputStream().close();
+				if (target.mac() && process.waitFor() != 0) {
+					throw new IOException("macOS could not open Gama.app. See " + log
+							+ ". You may need to allow the unsigned app in System Settings > Privacy & Security.");
+				}
+				return Status.OK_STATUS;
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return Status.CANCEL_STATUS;
+			} catch (IOException e) {
+				IStatus status = ResourceUtils.error("The release was built successfully, but GAMA could not be launched: "
+						+ e.getMessage() + "\nRelease: " + release, e);
+				StatusManager.getManager().handle(status, StatusManager.LOG | StatusManager.SHOW);
+				return status;
+			}
+		});
+		launch.setUser(true);
+		launch.schedule();
 	}
 }

@@ -10,6 +10,7 @@
  ********************************************************************************************************/
 package gama.ui.devtools.handlers;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.equinox.p2.core.ProvisionException;
 import org.eclipse.equinox.p2.engine.IProfileRegistry;
 import org.eclipse.equinox.p2.metadata.ILicense;
+import org.eclipse.equinox.p2.metadata.IInstallableUnit;
 import org.eclipse.equinox.p2.operations.ProvisioningJob;
 import org.eclipse.equinox.p2.operations.UpdateOperation;
 import org.eclipse.equinox.p2.query.QueryUtil;
@@ -39,6 +41,8 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.statushandlers.StatusManager;
+
+import gama.ui.devtools.install.UpdateSite;
 
 /** Updates only the installed developer tools, without the p2 update wizard. */
 public class UpdateToolsHandler extends AbstractHandler {
@@ -80,19 +84,39 @@ public class UpdateToolsHandler extends AbstractHandler {
 				final var artifacts = agent.getService(IArtifactRepositoryManager.class);
 				if (metadata == null || artifacts == null) return error("Eclipse provisioning services are unavailable.");
 				ui.getRepositoryTracker().addRepository(REPOSITORY, "GAMA Developer Tools", ui.getSession());
-				// Refresh the composite parents so a previously cached site sees newly published releases.
-				final var repository = metadata.refreshRepository(REPOSITORY, progress.split(30));
-				if (repository.query(QueryUtil.createIUQuery(FEATURE_ID), null).isEmpty()) {
-					return error("The update site does not publish GAMA Developer Tools: " + REPOSITORY);
+				// Refreshing p2 alone can still read GitHub Pages' cached mutable composite descriptor.
+				final URI[] releases = UpdateSite.releases(REPOSITORY, progress.split(10));
+				IInstallableUnit newest = null;
+				URI newestRepository = null;
+				final SubMonitor loading = progress.split(30).setWorkRemaining(releases.length);
+				for (URI release : releases) {
+					final var repository = metadata.loadRepository(release, loading.split(1));
+					for (IInstallableUnit candidate : repository.query(QueryUtil.createIUQuery(FEATURE_ID), null)) {
+						if (newest == null || candidate.getVersion().compareTo(newest.getVersion()) > 0) {
+							newest = candidate;
+							newestRepository = release;
+						}
+					}
 				}
-				artifacts.refreshRepository(REPOSITORY, progress.split(15));
+				if (newest == null) return error("The update site does not publish GAMA Developer Tools: " + REPOSITORY);
+				final var installedVersion = installed.toSet().stream().map(IInstallableUnit::getVersion)
+						.max(java.util.Comparator.naturalOrder()).orElseThrow();
+				final var availableVersion = newest.getVersion();
+				artifacts.loadRepository(newestRepository, progress.split(5));
 				final UpdateOperation operation = ui.getUpdateOperation(List.copyOf(installed.toSet()),
-						new URI[] { REPOSITORY });
+						new URI[] { newestRepository });
 				final IStatus resolution = operation.resolveModal(progress.split(50));
 				if (resolution.getCode() == UpdateOperation.STATUS_NOTHING_TO_UPDATE) {
+					if (availableVersion.compareTo(installedVersion) > 0) {
+						return error("GAMA Developer Tools " + availableVersion + " is published, but Eclipse did not "
+								+ "find an applicable update for installed version " + installedVersion
+								+ ". Use Help > Install New Software... with " + REPOSITORY
+								+ " to inspect the installation requirements.");
+					}
 					display.syncExec(() -> {
 						if (!shell.isDisposed()) MessageDialog.openInformation(shell, TITLE,
-								"No update is available. GAMA tools are up to date.");
+								"GAMA tools are up to date.\nInstalled: " + installedVersion
+								+ "\nLatest published: " + availableVersion);
 					});
 					return Status.OK_STATUS;
 				}
@@ -134,7 +158,7 @@ public class UpdateToolsHandler extends AbstractHandler {
 				return Status.OK_STATUS;
 			} catch (final OperationCanceledException e) {
 				return Status.CANCEL_STATUS;
-			} catch (final ProvisionException e) {
+			} catch (final ProvisionException | IOException e) {
 				return new Status(IStatus.ERROR, PLUGIN_ID,
 						"Unable to update GAMA tools. Check your network connection and the update site.", e);
 			}

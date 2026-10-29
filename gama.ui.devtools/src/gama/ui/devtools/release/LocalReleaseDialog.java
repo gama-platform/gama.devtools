@@ -28,7 +28,6 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 	private final LocalReleasePlan.Target target;
 	private final List<Path> jdks = new ArrayList<>();
 	private Text source;
-	private Text destination;
 	private Combo jdk;
 	private LocalReleasePlan result;
 
@@ -55,7 +54,6 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 				source.setText(project.getLocation().removeLastSegments(1).toOSString());
 			}
 		}
-		destination = directory(content, "Save release in:", DevToolsPreferences.get("release.destination"));
 		new Label(content, SWT.NONE).setText("JDK 25:");
 		jdk = new Combo(content, SWT.READ_ONLY);
 		jdk.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
@@ -127,12 +125,19 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 	@Override
 	protected void okPressed() {
 		try {
-			if (source.getText().isBlank() || destination.getText().isBlank()) {
-				throw new IllegalArgumentException("Choose the GAMA source checkout and a destination directory.");
+			if (source.getText().isBlank()) {
+				throw new IllegalArgumentException("Choose the GAMA source checkout.");
 			}
 			if (jdk.getSelectionIndex() < 0) throw new IllegalArgumentException("Select or browse to a full JDK 25.");
-			result = new LocalReleasePlan(Path.of(source.getText()).toRealPath(), jdks.get(jdk.getSelectionIndex()),
-					Path.of(destination.getText()).toRealPath(), target);
+			Path checkout = Path.of(source.getText()).toRealPath();
+			DirectoryDialog destination = new DirectoryDialog(getShell());
+			destination.setText("Save local GAMA release");
+			destination.setMessage("Choose a destination outside the GAMA source checkout.");
+			destination.setFilterPath(DevToolsPreferences.get("release.destination"));
+			String selected = destination.open();
+			if (selected == null) return;
+			result = new LocalReleasePlan(checkout, jdks.get(jdk.getSelectionIndex()),
+					Path.of(selected).toRealPath(), target);
 			result.validate();
 			DevToolsPreferences.store().setValue("release.source", result.source().toString());
 			DevToolsPreferences.store().setValue("release.destination", result.destination().toString());
@@ -144,7 +149,7 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 
 	@Override
 	protected void createButtonsForButtonBar(Composite parent) {
-		createButton(parent, IDialogConstants.OK_ID, "Build release", true);
+		createButton(parent, IDialogConstants.OK_ID, "Build release...", true);
 		createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CANCEL_LABEL, false);
 	}
 }
