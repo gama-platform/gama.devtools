@@ -18,7 +18,6 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.window.Window;
 import org.eclipse.ui.console.ConsolePlugin;
 import org.eclipse.ui.console.IConsole;
@@ -82,12 +81,9 @@ public final class BuildLocalReleaseHandler extends AbstractHandler {
 					display.asyncExec(() -> {
 						if (shell.isDisposed()) return;
 						MessageDialog success = new MessageDialog(shell, TITLE, null,
-								"The local release was saved in:\n" + release + "\n\n"
-								+ "It includes JDK 25 and does not need Eclipse or Maven to run."
-								+ (target.mac() ? "\nThis is an unsigned local build, not a notarized distribution." : "")
-								+ "\n\nRun the produced application now?",
-								MessageDialog.INFORMATION, new String[] { "Run GAMA", IDialogConstants.CLOSE_LABEL }, 1);
-						if (success.open() == 0) launchRelease(release, target);
+								"GAMA is ready to run.\n\nSaved in:\n" + release,
+								MessageDialog.INFORMATION, new String[] { "Ok", "Run" }, 1);
+						if (success.open() == 1) launchRelease(release, target);
 					});
 					return Status.OK_STATUS;
 				} catch (CancellationException e) {
