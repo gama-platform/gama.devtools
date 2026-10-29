@@ -2,12 +2,13 @@
 <?compositeArtifactRepository version="1.0.0"?>
 <repository name="GAMA Developer Tools" type="org.eclipse.equinox.internal.p2.artifact.repository.CompositeArtifactRepository" version="1.0.0">
   <properties size="1">
-    <property name="p2.timestamp" value="1793240828014" />
+    <property name="p2.timestamp" value="1793241463574" />
   </properties>
-  <children size="4">
+  <children size="5">
     <child location="releases/40651954055-1" />
     <child location="releases/40723076874-1" />
     <child location="releases/40802123245-1" />
     <child location="releases/40806358784-1" />
+    <child location="releases/40807418916-1" />
   </children>
 </repository>
