@@ -11,13 +11,41 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.equinox.p2.core.ProvisionException;
+import org.eclipse.equinox.p2.metadata.IInstallableUnit;
+import org.eclipse.equinox.p2.query.QueryUtil;
+import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
 /** Discovers immutable releases without reusing a cached mutable composite descriptor. */
 public final class UpdateSite {
 
+	public static final URI REPOSITORY = URI.create("https://gama-platform.org/gama.devtools/");
+	public static final String FEATURE_ID = "gama.feature.devtools.feature.group";
+
+	public record Release(IInstallableUnit unit, URI repository) {}
+
 	private UpdateSite() {}
+
+	public static Release latest(IMetadataRepositoryManager metadata, IProgressMonitor monitor)
+			throws IOException, ProvisionException {
+		SubMonitor progress = SubMonitor.convert(monitor, 100);
+		URI[] releases = releases(REPOSITORY, progress.split(20));
+		Release newest = null;
+		SubMonitor loading = progress.split(80).setWorkRemaining(releases.length);
+		for (URI release : releases) {
+			var repository = metadata.loadRepository(release, loading.split(1));
+			for (IInstallableUnit candidate : repository.query(QueryUtil.createIUQuery(FEATURE_ID), null)) {
+				if (newest == null || candidate.getVersion().compareTo(newest.unit().getVersion()) > 0) {
+					newest = new Release(candidate, release);
+				}
+			}
+		}
+		if (newest == null) throw new IOException("The update site does not publish GAMA Developer Tools: " + REPOSITORY);
+		return newest;
+	}
 
 	public static URI[] releases(URI site, IProgressMonitor monitor) throws IOException {
 		if (monitor.isCanceled()) throw new OperationCanceledException();

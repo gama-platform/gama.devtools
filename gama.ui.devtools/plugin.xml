@@ -51,6 +51,9 @@
    </extension>
 
    <!-- Handlers -->
+   <extension point="org.eclipse.ui.startup">
+      <startup class="gama.ui.devtools.install.UpdateCheckStartup"/>
+   </extension>
    <extension point="org.eclipse.ui.handlers">
       <handler commandId="gama.ui.devtools.launchGama" class="gama.ui.devtools.handlers.LaunchGamaHandler"/>
       <handler commandId="gama.ui.devtools.buildLocalRelease" class="gama.ui.devtools.handlers.BuildLocalReleaseHandler"/>

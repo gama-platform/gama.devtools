@@ -40,18 +40,28 @@ import org.eclipse.equinox.p2.ui.ProvisioningUI;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.handlers.HandlerUtil;
+import org.eclipse.ui.commands.IElementUpdater;
+import org.eclipse.ui.menus.UIElement;
 import org.eclipse.ui.statushandlers.StatusManager;
 
 import gama.ui.devtools.install.UpdateSite;
+import gama.ui.devtools.install.UpdateCheckStartup;
 
 /** Updates only the installed developer tools, without the p2 update wizard. */
-public class UpdateToolsHandler extends AbstractHandler {
+public class UpdateToolsHandler extends AbstractHandler implements IElementUpdater {
 
 	private static final String PLUGIN_ID = "gama.ui.devtools";
-	private static final String FEATURE_ID = "gama.feature.devtools.feature.group";
+	private static final String FEATURE_ID = UpdateSite.FEATURE_ID;
 	private static final String TITLE = "Update GAMA tools";
-	private static final URI REPOSITORY = URI.create("https://gama-platform.org/gama.devtools/");
+	private static final URI REPOSITORY = UpdateSite.REPOSITORY;
 	private static final AtomicBoolean UPDATING = new AtomicBoolean();
+
+	@Override
+	@SuppressWarnings("rawtypes")
+	public void updateElement(UIElement element, java.util.Map parameters) {
+		element.setText(UpdateCheckStartup.isUpdateAvailable()
+				? "Update GAMA tools... (update available)" : "Update GAMA tools...");
+	}
 
 	@Override
 	public Object execute(final ExecutionEvent event) throws ExecutionException {
@@ -84,24 +94,12 @@ public class UpdateToolsHandler extends AbstractHandler {
 				final var artifacts = agent.getService(IArtifactRepositoryManager.class);
 				if (metadata == null || artifacts == null) return error("Eclipse provisioning services are unavailable.");
 				ui.getRepositoryTracker().addRepository(REPOSITORY, "GAMA Developer Tools", ui.getSession());
-				// Refreshing p2 alone can still read GitHub Pages' cached mutable composite descriptor.
-				final URI[] releases = UpdateSite.releases(REPOSITORY, progress.split(10));
-				IInstallableUnit newest = null;
-				URI newestRepository = null;
-				final SubMonitor loading = progress.split(30).setWorkRemaining(releases.length);
-				for (URI release : releases) {
-					final var repository = metadata.loadRepository(release, loading.split(1));
-					for (IInstallableUnit candidate : repository.query(QueryUtil.createIUQuery(FEATURE_ID), null)) {
-						if (newest == null || candidate.getVersion().compareTo(newest.getVersion()) > 0) {
-							newest = candidate;
-							newestRepository = release;
-						}
-					}
-				}
-				if (newest == null) return error("The update site does not publish GAMA Developer Tools: " + REPOSITORY);
+				final var newest = UpdateSite.latest(metadata, progress.split(40));
+				final URI newestRepository = newest.repository();
 				final var installedVersion = installed.toSet().stream().map(IInstallableUnit::getVersion)
 						.max(java.util.Comparator.naturalOrder()).orElseThrow();
-				final var availableVersion = newest.getVersion();
+				final var availableVersion = newest.unit().getVersion();
+				UpdateCheckStartup.setUpdateAvailable(availableVersion.compareTo(installedVersion) > 0);
 				artifacts.loadRepository(newestRepository, progress.split(5));
 				final UpdateOperation operation = ui.getUpdateOperation(List.copyOf(installed.toSet()),
 						new URI[] { newestRepository });

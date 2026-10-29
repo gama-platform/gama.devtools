@@ -19,6 +19,11 @@ installation; a license prompt is shown only for licenses not already accepted. 
 installation or update before using this command. Workspace launches and plugins copied into `dropins`
 must first be installed as the feature from the update site to use this action.
 
+Availability is also checked in the background at startup and every hour. When a newer version is
+published, the menu changes to **Update GAMA tools... (update available)**. These checks do not install
+anything or show dialogs; failures are recorded in Eclipse's Error Log and retried at the next hourly
+check. Workspace launches and dropins-only installations are skipped.
+
 The menu fetches a fresh composite release list, bypassing the mutable descriptor's HTTP cache, then
 checks the newest published feature directly in its immutable release repository. This avoids
 GitHub Pages' cached HTTPS metadata hiding a deployment that is already visible at the HTTP address.
