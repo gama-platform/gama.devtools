@@ -10,6 +10,8 @@
       </command>
       <command id="gama.ui.devtools.updateTools" categoryId="gama.ui.devtools.category"
             name="Update GAMA tools..." description="Checks for and installs updates to GAMA Developer Tools"/>
+      <command id="gama.ui.devtools.reportIssue" categoryId="gama.ui.devtools.category"
+            name="Report an issue..." description="Opens the GAMA Developer Tools new issue page in your web browser"/>
       <command id="gama.ui.devtools.buildLocalRelease" categoryId="gama.ui.devtools.category"
             name="Build local release..." description="Builds GAMA for this environment with an automatically managed Maven and saves a runnable release with JDK 25"/>
       <command id="gama.ui.devtools.launchGama" categoryId="gama.ui.devtools.category"
@@ -62,6 +64,7 @@
       <handler commandId="gama.ui.devtools.dependencyGraph" class="gama.ui.devtools.handlers.DependencyGraphHandler"/>
       <handler commandId="gama.ui.devtools.openNewWizard" class="gama.ui.devtools.handlers.OpenNewWizardHandler"/>
       <handler commandId="gama.ui.devtools.updateTools" class="gama.ui.devtools.handlers.UpdateToolsHandler"/>
+      <handler commandId="gama.ui.devtools.reportIssue" class="gama.ui.devtools.handlers.ReportIssueHandler"/>
       <handler commandId="gama.ui.devtools.install" class="gama.ui.devtools.handlers.InstallSourcesHandler"/>
    </extension>
 
@@ -161,6 +164,7 @@
                </command>
             </menu>
             <separator name="install" visible="true"/>
+            <command commandId="gama.ui.devtools.reportIssue" style="push"/>
             <menu id="gama.ui.devtools.menu.install" label="Install GAMA sources">
                <command commandId="gama.ui.devtools.install" label="Install core plugins..." style="push">
                   <parameter name="gama.ui.devtools.installKind" value="CORE"/>

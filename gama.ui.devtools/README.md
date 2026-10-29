@@ -47,7 +47,8 @@ The **GAMA** menu contains, without headings or icons: the **Run GAMA** submenu
 Debug UI / Debug headless, then a separator and Build local release...);
 **Clean GAMA plugins**; **Repair GAMA plugins**; a separator; **Search GAML keyword...**
 directly in the menu and the **Report** submenu (Native library dependencies / Missing annotations);
-a separator; **Create GAMA artefacts**; then **Install GAMA sources** and **Update GAMA tools...**.
+a separator; **Create GAMA artefacts**; a separator; **Report an issue...**;
+then **Install GAMA sources** and **Update GAMA tools...**.
 The **Create GAMA artefacts** submenu lists all six creation wizards. They are also available in
 *File > New > Other... > GAMA Development*.
 
@@ -66,6 +67,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Generate missing tests** | Writes `models/Tests/Untested Operators.gaml` in each selected plugin (or all of them). It contains one `test` stub per operator reported as not tested, with its Java signature. Stubs already in the file are kept. |
 | **Report > Native library dependencies** | Runs `jdeps` on compiled bundles and libraries and produces an interactive HTML dependency explorer and DOT export. This needs a full JDK, but no graph library. See [Static GAMA Dependencies Analysis](README_DEPENDENCIES_GRAPH.md) for standalone use and DOT compatibility. |
 | **Update GAMA tools...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
+| **Report an issue...** | Opens `https://github.com/gama-platform/gama.devtools/issues/new` in the external web browser. Review and submit the issue on GitHub (sign-in may be required); nothing is submitted automatically. |
 | **Create GAMA artefacts > New GAMA Plugin / Skill / Operators / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
 | **Install GAMA sources > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
 
