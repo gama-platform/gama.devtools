@@ -77,15 +77,16 @@ specific editor bindings can still override it; configure these in *Preferences 
 
 ## Building a local GAMA release
 
-Choose **GAMA > Run GAMA > Build local release...**, then select a complete GAMA source checkout and JDK.
+Choose **GAMA > Run GAMA > Build local release...**. The source checkout is determined automatically
+from the workspace's `gama.parent` project, which must be imported; there is no source selector.
 Click **Build release...** to choose an existing destination directory **outside** that checkout;
 canceling the destination chooser leaves the build dialog open without starting a build.
-The checkout containing the workspace's `gama.parent` is suggested automatically, and the destination
-chooser remembers the previous destination. Eclipse prompts to save modified editors before starting. The build uses
+The destination chooser remembers the previous destination. Eclipse prompts to save modified editors before starting. The build uses
 the saved files on disk, including local source changes; it does not fetch, switch branches, modify
 the checkout, or run the checkout's platform-wide packaging scripts.
 
-The dialog selects Eclipse's Java runtime when it is a **full JDK 25** matching the current environment.
+The dialog prefers Eclipse's Java runtime when it is a **full JDK 25** matching the current environment.
+When exactly one compatible JDK is available, it is used automatically and the JDK controls are hidden.
 Otherwise choose a JDK 25 from Eclipse's *Installed JREs*, or browse to its home directory
 (`Contents/Home` inside a macOS JDK). A JRE or Java 21 is sufficient for running the developer tools,
 but cannot compile GAMA. Only the current Eclipse OS/architecture is built: macOS Intel/Apple Silicon,

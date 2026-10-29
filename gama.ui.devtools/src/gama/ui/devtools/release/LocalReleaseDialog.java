@@ -16,7 +16,6 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
 
 import gama.ui.devtools.launch.GamaLaunches;
 import gama.ui.devtools.preferences.DevToolsPreferences;
@@ -27,7 +26,7 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 
 	private final LocalReleasePlan.Target target;
 	private final List<Path> jdks = new ArrayList<>();
-	private Text source;
+	private final List<String> jdkNames = new ArrayList<>();
 	private Combo jdk;
 	private LocalReleasePlan result;
 
@@ -43,22 +42,21 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 	protected Control createDialogArea(Composite parent) {
 		Composite area = (Composite) super.createDialogArea(parent);
 		setTitle("Build a local GAMA release");
-		setMessage("Build only for " + target.id() + ". Maven is downloaded automatically; no installation is needed.");
+		setMessage("The release will be built using the plugins present in the workspace. "
+				+ "The first build might take more time. "
+				+ "Note that this produces an unsigned application, which can only be run locally");
 		Composite content = new Composite(area, SWT.NONE);
 		content.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		content.setLayout(new GridLayout(3, false));
-		source = directory(content, "GAMA source checkout:", DevToolsPreferences.get("release.source"));
-		if (source.getText().isBlank()) {
-			var project = GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT);
-			if (project.exists() && project.getLocation() != null) {
-				source.setText(project.getLocation().removeLastSegments(1).toOSString());
-			}
-		}
-		new Label(content, SWT.NONE).setText("JDK 25:");
-		jdk = new Combo(content, SWT.READ_ONLY);
-		jdk.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		addJdk(Path.of(System.getProperty("java.home")), "Eclipse runtime");
 		for (var vm : GamaLaunches.jdks()) addJdk(vm.getInstallLocation().toPath(), vm.getName());
+		if (jdks.size() == 1) return area;
+		new Label(content, SWT.NONE).setText("JDK 25:");
+		jdk = new Combo(content, SWT.READ_ONLY);
+		GridData jdkData = new GridData(SWT.FILL, SWT.CENTER, true, false);
+		jdkData.widthHint = 440;
+		jdk.setLayoutData(jdkData);
+		jdk.setItems(jdkNames.toArray(String[]::new));
 		if (!jdks.isEmpty()) jdk.select(0);
 		Button browse = new Button(content, SWT.PUSH);
 		browse.setText("Browse...");
@@ -77,37 +75,7 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 				setErrorMessage(ex.getMessage());
 			}
 		});
-		Label explanation = new Label(content, SWT.WRAP);
-		GridData data = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
-		data.widthHint = 650;
-		explanation.setLayoutData(data);
-		explanation.setText("Eclipse's runtime is used when it is a full JDK 25; otherwise choose a configured JDK "
-				+ "or browse to one. The selected JDK is copied into the release so it runs without Eclipse.\n\n"
-				+ "A complete source snapshot is built, including saved local changes. Your checkout is not modified. "
-				+ "Save outside the source checkout; existing releases are never overwritten.\n\n"
-				+ "The first build downloads Maven and GAMA's dependencies and can take considerable time and disk space. "
-				+ "Progress and cancellation are available in Eclipse; full output is shown in the Console. "
-				+ "This produces an unsigned runnable folder, not a signed installer.");
 		return area;
-	}
-
-	private Text directory(Composite parent, String label, String value) {
-		new Label(parent, SWT.NONE).setText(label);
-		Text text = new Text(parent, SWT.BORDER);
-		GridData data = new GridData(SWT.FILL, SWT.CENTER, true, false);
-		data.widthHint = 440;
-		text.setLayoutData(data);
-		text.setText(value);
-		Button browse = new Button(parent, SWT.PUSH);
-		browse.setText("Browse...");
-		browse.addListener(SWT.Selection, e -> {
-			DirectoryDialog dialog = new DirectoryDialog(getShell());
-			dialog.setText(label);
-			dialog.setFilterPath(text.getText());
-			String selected = dialog.open();
-			if (selected != null) text.setText(selected);
-		});
-		return text;
 	}
 
 	private void addJdk(Path path, String name) {
@@ -116,7 +84,9 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 			LocalReleasePlan.validateJdk(path, target);
 			if (jdks.contains(path)) return;
 			jdks.add(path);
-			jdk.add(name + " - " + path);
+			String label = name + " - " + path;
+			jdkNames.add(label);
+			if (jdk != null) jdk.add(label);
 		} catch (java.io.IOException e) {
 			// A JRE, incompatible JDK or stale Eclipse entry is not a selectable build JDK.
 		}
@@ -125,21 +95,22 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 	@Override
 	protected void okPressed() {
 		try {
-			if (source.getText().isBlank()) {
-				throw new IllegalArgumentException("Choose the GAMA source checkout.");
+			var project = GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT);
+			if (!project.exists() || project.getLocation() == null) {
+				throw new IllegalArgumentException("Import gama.parent into the workspace before building a release.");
 			}
-			if (jdk.getSelectionIndex() < 0) throw new IllegalArgumentException("Select or browse to a full JDK 25.");
-			Path checkout = Path.of(source.getText()).toRealPath();
+			int jdkIndex = jdk == null ? 0 : jdk.getSelectionIndex();
+			if (jdkIndex < 0 || jdks.isEmpty()) throw new IllegalArgumentException("Select or browse to a full JDK 25.");
+			Path checkout = project.getLocation().removeLastSegments(1).toFile().toPath().toRealPath();
 			DirectoryDialog destination = new DirectoryDialog(getShell());
 			destination.setText("Save local GAMA release");
 			destination.setMessage("Choose a destination outside the GAMA source checkout.");
 			destination.setFilterPath(DevToolsPreferences.get("release.destination"));
 			String selected = destination.open();
 			if (selected == null) return;
-			result = new LocalReleasePlan(checkout, jdks.get(jdk.getSelectionIndex()),
+			result = new LocalReleasePlan(checkout, jdks.get(jdkIndex),
 					Path.of(selected).toRealPath(), target);
 			result.validate();
-			DevToolsPreferences.store().setValue("release.source", result.source().toString());
 			DevToolsPreferences.store().setValue("release.destination", result.destination().toString());
 			super.okPressed();
 		} catch (Exception e) {
