@@ -10,7 +10,7 @@
       plugins (standard layout, annotation processor configured, integration in the build), skills, operators,
       actions, types and test models; a dialog-free "Clean and Rebuild" that resets the annotation processor;
       a configuration checker with quick fixes; a report of undocumented and untested GAML elements; the rebuild
-      of the processor jar and a package dependency graph.
+      of the processor jar, a package dependency graph and native local releases without installing Maven.
    </description>
 
    <copyright>

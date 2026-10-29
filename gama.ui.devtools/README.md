@@ -36,15 +36,10 @@ local installation, use a uniquely named ZIP for each build rather than a cached
 ## Commands
 
 The **GAMA** menu contains, without headings or icons: the **Run...** submenu (Run UI / Run headless /
-Run tests, Debug UI / Debug headless, Configure...); **Clean all...** with the **Search...**, **Repair...**
+Run tests, Debug UI / Debug headless, Configure...); **Clean all...**, **Build local release...**, with the **Search...**, **Repair...**
 and **Create...** submenus; then the **Install...** submenu and **Update...**.
 The **Create...** submenu lists all six creation wizards. They are also available in
 *File > New > Other... > GAMA Development*.
-
-The menu layout, launch parameters and updater registration have a standalone regression test:
-```
-java gama.ui.devtools/tests/DevToolsMenuTest.java .
-```
 
 | Command | What it does |
 |---|---|
@@ -53,6 +48,7 @@ java gama.ui.devtools/tests/DevToolsMenuTest.java .
 | **Run... > Configure...** | Associates each flavor with an existing configuration or generates a default; provides editing and confirmed restoration of defaults. |
 | **Clean all...** (`Cmd+B` on macOS, `Ctrl+B` on Windows/Linux) | Saves the editors, refreshes the whole workspace recursively from disk and automatically repairs the plugins configuration (see *Configuration checks*). Disables the annotation processor, deletes the `gaml/` folders and re-enables the processor. These steps only affect the GAMA plugins. Then runs a clean build and a full build of the whole workspace, and checks that every `GamlAdditions.java` was regenerated. The configuration is checked again afterwards: remaining problems appear in the Problems view, with quick fixes (`Ctrl/Cmd+1`). No dialog is shown and the job can be cancelled. |
 | **Clean...** (context menu) | The same, limited to the GAMA plugins in the selection: only they are reset, cleaned and rebuilt. The initial refresh still covers the whole workspace. |
+| **Build local release...** | Builds a runnable GAMA folder for the current OS and architecture, using a privately managed Maven and including JDK 25. Choose the source checkout, JDK and destination (see below). |
 | **Rebuild annotation processor** | Regenerates `gama.processor/gama.processor.jar` from `Generate Processor.jardesc`. Use it after modifying `gama.processor` or `gama.annotations`. |
 | **Regenerate Xtext grammar** | Runs `gaml.grammar/src/gaml/grammar/generator/Generate_GAML_Artefacts.mwe2` to regenerate the GAML grammar artifacts. The `gaml.grammar`, `gaml.compiler` and `gama.ui.editor` projects must be open. |
 | **Update file headers** | Sets the GAMA version and copyright end year, updates existing headers and adds missing ones, with a mandatory per-file preview and undo. |
@@ -66,6 +62,47 @@ java gama.ui.devtools/tests/DevToolsMenuTest.java .
 The Clean and Rebuild All shortcut takes precedence over Eclipse's standard Build All binding in the default
 key scheme. It always targets all GAMA plugins, regardless of selection. Explicit user bindings and more
 specific editor bindings can still override it; configure these in *Preferences > General > Keys*.
+
+## Building a local GAMA release
+
+Choose **GAMA > Build local release...**, then select a complete GAMA source checkout and an existing
+destination directory **outside** that checkout. The checkout containing the workspace's `gama.parent`
+is suggested automatically. Eclipse prompts to save modified editors before starting. The build uses
+the saved files on disk, including local source changes; it does not fetch, switch branches, modify
+the checkout, or run the checkout's platform-wide packaging scripts.
+
+The dialog selects Eclipse's Java runtime when it is a **full JDK 25** matching the current environment.
+Otherwise choose a JDK 25 from Eclipse's *Installed JREs*, or browse to its home directory
+(`Contents/Home` inside a macOS JDK). A JRE or Java 21 is sufficient for running the developer tools,
+but cannot compile GAMA. Only the current Eclipse OS/architecture is built: macOS Intel/Apple Silicon,
+Windows x86-64, or Linux x86-64. Unsupported environments are reported instead of falling back to
+another platform.
+
+No system Maven, shell, archive utility, or additional graph/build library is required. Apache Maven
+3.9.16 is downloaded from Maven Central on first use, verified against its pinned SHA-512 checksum,
+and cached in the plugin's workspace state. Maven's normal local dependency cache is reused. Internet
+access is required for the initial download and any uncached Maven/p2 dependencies. The extension's
+`org.eclipse.ui.console` dependency is declared explicitly and resolved by the normal Tycho build.
+
+The background job snapshots the sources into plugin state (excluding `.git`, `.metadata`, `target`
+and `bin`), then installs `gama.annotations`, `gama.processor`, and finally `gama.parent`, following
+GAMA's build order. The snapshot's target environments and product packaging tasks are restricted to
+the current platform. Tests, signing, deployment and Maven build-cache restoration are disabled.
+As in GAMA's official build script, the optional Copilot feature is omitted from the snapshot's product.
+This builds the checkout's existing version; it does not bump versions or generate official installers.
+
+Follow the **GAMA Local Release** Console and Eclipse's Progress view; cancellation terminates the
+running Maven process and its subprocesses. A complete log is retained in plugin state, including on
+failure. The first build can take considerable time and disk space: it needs room for a source
+snapshot, Maven dependencies, product build outputs, and the final product with a copied JDK.
+Temporary snapshots and incomplete destination folders are removed when the job finishes.
+
+On success, the chosen destination contains a new `GAMA-local-<os>.<ws>.<arch>-<timestamp>` folder
+with a runnable application (`Gama.app` on macOS, `Gama.exe` on Windows, `Gama` on Linux), the selected
+JDK, and `build.log`. Existing release folders are never overwritten. The launcher and supplied
+headless scripts use the bundled JDK, so the folder is independent of Eclipse and the original JDK
+installation. Keep the whole folder when moving it. This is an unsigned local build, not a signed
+or notarized release; macOS security prompts may require explicitly allowing the app.
 
 ## Installing source projects
 

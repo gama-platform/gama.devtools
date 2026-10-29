@@ -1,0 +1,4 @@
+digraph G {
+  1 [ label="gama.ui.devtools" ];
+  2 [ label="gama.ui.devtools-0.0.0-SNAPSHOT.jar" ];
+}

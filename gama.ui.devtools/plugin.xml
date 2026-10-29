@@ -10,6 +10,8 @@
       </command>
       <command id="gama.ui.devtools.updateTools" categoryId="gama.ui.devtools.category"
             name="Update..." description="Checks for and installs updates to GAMA Developer Tools"/>
+      <command id="gama.ui.devtools.buildLocalRelease" categoryId="gama.ui.devtools.category"
+            name="Build local release..." description="Builds GAMA for this environment with an automatically managed Maven and saves a runnable release with JDK 25"/>
       <command id="gama.ui.devtools.launchGama" categoryId="gama.ui.devtools.category"
             name="Launch GAMA" description="Run or debug workspace GAMA using a standard Eclipse Application configuration">
          <commandParameter id="gama.ui.devtools.launchFlavor" name="Flavor (GUI, HEADLESS, TESTS)" optional="true"/>
@@ -49,6 +51,7 @@
    <!-- Handlers -->
    <extension point="org.eclipse.ui.handlers">
       <handler commandId="gama.ui.devtools.launchGama" class="gama.ui.devtools.handlers.LaunchGamaHandler"/>
+      <handler commandId="gama.ui.devtools.buildLocalRelease" class="gama.ui.devtools.handlers.BuildLocalReleaseHandler"/>
       <handler commandId="gama.ui.devtools.cleanAndRebuild" class="gama.ui.devtools.handlers.CleanAndRebuildHandler"/>
       <handler commandId="gama.ui.devtools.gamlReport" class="gama.ui.devtools.handlers.GamlReportHandler"/>
       <handler commandId="gama.ui.devtools.generateTestStubs" class="gama.ui.devtools.handlers.GenerateTestStubsHandler"/>
@@ -122,6 +125,7 @@
             <command commandId="gama.ui.devtools.cleanAndRebuild" label="Clean all..." style="push">
                <parameter name="gama.ui.devtools.scope" value="all"/>
             </command>
+            <command commandId="gama.ui.devtools.buildLocalRelease" style="push"/>
             <menu id="gama.ui.devtools.menu.search" label="Search...">
                <command commandId="gama.ui.devtools.findKeyword" style="push"/>
                <command commandId="gama.ui.devtools.dependencyGraph" style="push"/>

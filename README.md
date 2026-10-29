@@ -1,7 +1,8 @@
 # gama.devtools
 
 Eclipse development tools for [GAMA](https://github.com/gama-platform/gama): wizards, launches, clean and
-rebuild of the GAMA plugins, configuration repairs, reports and source installation.
+rebuild of the GAMA plugins, local release builds without installing Maven, configuration repairs,
+reports and source installation.
 
 Update site: `https://gama-platform.org/gama.devtools/` (in Eclipse, *Help > Install New Software...*).
 
