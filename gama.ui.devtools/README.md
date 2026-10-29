@@ -45,9 +45,9 @@ local installation, use a uniquely named ZIP for each build rather than a cached
 The **GAMA** menu contains, without headings or icons: the **Run GAMA** submenu
 (Configure..., followed by a separator, Run UI / Run headless / Run tests, a separator,
 Debug UI / Debug headless, then a separator and Build local release...);
-**Clean GAMA plugins**; **Search GAML keyword...** directly in the menu; the **Report**
-submenu (Native library dependencies / Missing annotations); **Repair GAMA plugins**
-and **Create GAMA artefacts** submenus; then **Install GAMA sources** and **Update GAMA tools...**.
+**Clean GAMA plugins**; **Repair GAMA plugins**; a separator; **Search GAML keyword...**
+directly in the menu and the **Report** submenu (Native library dependencies / Missing annotations);
+a separator; **Create GAMA artefacts**; then **Install GAMA sources** and **Update GAMA tools...**.
 The **Create GAMA artefacts** submenu lists all six creation wizards. They are also available in
 *File > New > Other... > GAMA Development*.
 

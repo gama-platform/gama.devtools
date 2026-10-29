@@ -127,17 +127,19 @@
             <command commandId="gama.ui.devtools.cleanAndRebuild" label="Clean GAMA plugins" style="push">
                <parameter name="gama.ui.devtools.scope" value="all"/>
             </command>
-            <command commandId="gama.ui.devtools.findKeyword" style="push"/>
-            <menu id="gama.ui.devtools.menu.report" label="Report">
-               <command commandId="gama.ui.devtools.dependencyGraph" style="push"/>
-               <command commandId="gama.ui.devtools.gamlReport" style="push"/>
-            </menu>
             <menu id="gama.ui.devtools.menu.repair" label="Repair GAMA plugins">
                <command commandId="gama.ui.devtools.rebuildProcessorJar" style="push"/>
                <command commandId="gama.ui.devtools.regenerateGrammar" style="push"/>
                <command commandId="gama.ui.devtools.updateJavaHeaders" style="push"/>
                <command commandId="gama.ui.devtools.generateTestStubs" style="push"/>
             </menu>
+            <separator name="reports" visible="true"/>
+            <command commandId="gama.ui.devtools.findKeyword" style="push"/>
+            <menu id="gama.ui.devtools.menu.report" label="Report">
+               <command commandId="gama.ui.devtools.dependencyGraph" style="push"/>
+               <command commandId="gama.ui.devtools.gamlReport" style="push"/>
+            </menu>
+            <separator name="create" visible="true"/>
             <menu id="gama.ui.devtools.menu.create" label="Create GAMA artefacts">
                <command commandId="gama.ui.devtools.openNewWizard" label="New GAMA Plugin..." style="push">
                   <parameter name="gama.ui.devtools.wizardId" value="gama.ui.devtools.wizards.plugin"/>
