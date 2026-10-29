@@ -164,7 +164,6 @@
                </command>
             </menu>
             <separator name="install" visible="true"/>
-            <command commandId="gama.ui.devtools.reportIssue" style="push"/>
             <menu id="gama.ui.devtools.menu.install" label="Install GAMA sources">
                <command commandId="gama.ui.devtools.install" label="Install core plugins..." style="push">
                   <parameter name="gama.ui.devtools.installKind" value="CORE"/>
@@ -176,8 +175,12 @@
                   <parameter name="gama.ui.devtools.installKind" value="COMMUNITY"/>
                </command>
             </menu>
+            <command commandId="gama.ui.devtools.reportIssue" style="push"/>
+            <separator
+                  name="additions"
+                  visible="false">
+            </separator>
             <command commandId="gama.ui.devtools.updateTools" style="push"/>
-            <separator name="additions" visible="false"/>
          </menu>
       </menuContribution>
       <menuContribution locationURI="popup:org.eclipse.ui.popup.any?after=additions">
