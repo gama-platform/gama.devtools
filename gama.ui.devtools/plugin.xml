@@ -153,7 +153,7 @@
                <command commandId="gama.ui.devtools.openNewWizard" label="New GAMA Skill..." style="push">
                   <parameter name="gama.ui.devtools.wizardId" value="gama.ui.devtools.wizards.skill"/>
                </command>
-               <command commandId="gama.ui.devtools.openNewWizard" label="New GAMA Operators..." style="push">
+               <command commandId="gama.ui.devtools.openNewWizard" label="New GAMA Operator..." style="push">
                   <parameter name="gama.ui.devtools.wizardId" value="gama.ui.devtools.wizards.operator"/>
                </command>
                <command commandId="gama.ui.devtools.openNewWizard" label="New GAMA Action..." style="push">
@@ -222,7 +222,7 @@
             class="gama.ui.devtools.wizards.NewGamaSkillWizard" icon="icons/gama.png" project="false">
          <description>Creates a skill in a GAMA plugin.</description>
       </wizard>
-      <wizard id="gama.ui.devtools.wizards.operator" category="gama.ui.devtools.wizards" name="New GAMA Operators"
+      <wizard id="gama.ui.devtools.wizards.operator" category="gama.ui.devtools.wizards" name="New GAMA Operator"
             class="gama.ui.devtools.wizards.NewGamaOperatorWizard" icon="icons/gama.png" project="false">
          <description>Creates a class of documented GAML operators in a GAMA plugin.</description>
       </wizard>

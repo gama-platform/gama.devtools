@@ -73,7 +73,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Report > Native library dependencies** | Runs `jdeps` on compiled bundles and libraries and produces an interactive HTML dependency explorer and DOT export. This needs a full JDK, but no graph library. See [Static GAMA Dependencies Analysis](README_DEPENDENCIES_GRAPH.md) for standalone use and DOT compatibility. |
 | **Update GAMA tools...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
 | **Report an issue...** | Opens `https://github.com/gama-platform/gama.devtools/issues/new` in the external web browser. Review and submit the issue on GitHub (sign-in may be required); nothing is submitted automatically. |
-| **Create GAMA artefacts > New GAMA Plugin / Skill / Operators / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
+| **Create GAMA artefacts > New GAMA Plugin / Skill / Operator / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
 | **Install GAMA sources > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
 
 The Clean and Rebuild All shortcut takes precedence over Eclipse's standard Build All binding in the default

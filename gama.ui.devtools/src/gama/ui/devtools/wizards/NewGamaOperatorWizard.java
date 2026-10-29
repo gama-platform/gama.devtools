@@ -20,7 +20,7 @@ import gama.ui.devtools.templates.CodeTemplates;
 public class NewGamaOperatorWizard extends AbstractGamaClassWizard {
 
 	@Override
-	protected String title() { return "New GAMA Operators"; }
+	protected String title() { return "New GAMA Operator"; }
 
 	@Override
 	protected String description() { return "Creates a class defining GAML operators, with documentation and examples used as tests."; }
