@@ -228,7 +228,7 @@ workspace launches. GUI launches preserve the product's `-data @noDefault`, allo
 and initialize its workspace normally rather than forcing an uninitialized PDE runtime directory.
 Headless and test launches replace the product's `-data` argument with separate runtime workspaces,
 located beside the development workspace (`gama-runtime-headless`, `gama-runtime-tests`).
-They do not clear runtime workspaces automatically.
+Generated launches clear the configuration area before launching, but do not clear runtime workspaces.
 
 **Run GAMA > Configure...** lets you select each flavor and change its associated configuration. **Edit
 configuration...** opens Eclipse's standard launch properties, including JRE, memory, arguments and plugins.

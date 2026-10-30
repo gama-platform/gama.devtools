@@ -158,7 +158,7 @@ public final class GamaLaunches {
 		copy.setAttribute(IPDELauncherConstants.ASKCLEAR, false);
 		copy.setAttribute(IPDELauncherConstants.CONFIG_USE_DEFAULT_AREA, true);
 		copy.setAttribute(IPDELauncherConstants.CONFIG_GENERATE_DEFAULT, true);
-		copy.setAttribute(IPDELauncherConstants.CONFIG_CLEAR_AREA, false);
+		copy.setAttribute(IPDELauncherConstants.CONFIG_CLEAR_AREA, true);
 		if (flavor != Flavor.GUI) {
 			copy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_WORKING_DIRECTORY, runtime);
 		}
