@@ -11,8 +11,10 @@ import org.eclipse.ui.menus.IMenuService;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.eclipse.ui.statushandlers.StatusManager;
 
 import gama.ui.devtools.GamaDevToolsActivator;
+import gama.ui.devtools.util.ResourceUtils;
 
 /** Opens the same contributed commands as the main GAMA menu. */
 public final class GamaMenuControl extends WorkbenchWindowControlContribution {
@@ -30,13 +32,27 @@ public final class GamaMenuControl extends WorkbenchWindowControlContribution {
 		IMenuService service = getWorkbenchWindow().getService(IMenuService.class);
 		MenuManager manager = new MenuManager("GAMA", "gama.ui.devtools.menu");
 		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
-		service.populateContributionManager(manager, "menu:gama.ui.devtools.menu");
 		var menu = manager.createContextMenu(toolbar);
+		boolean[] populated = { false };
 		manager.addMenuListener(shown -> manager.updateAll(true));
 		button.addListener(SWT.Selection, event -> {
-			var bounds = button.getBounds();
-			menu.setLocation(toolbar.toDisplay(bounds.x, bounds.y + bounds.height));
-			menu.setVisible(true);
+			toolbar.getDisplay().asyncExec(() -> {
+				if (toolbar.isDisposed()) return;
+				if (!populated[0]) {
+					service.populateContributionManager(manager, "menu:gama.ui.devtools.menu");
+					populated[0] = true;
+				}
+				manager.updateAll(true);
+				if (menu.getItemCount() == 0 || manager.getItems().length <= 1) {
+					StatusManager.getManager().handle(ResourceUtils.error(
+							"Cannot populate the GAMA toolbar menu. Use the GAMA menu in the menu bar.", null),
+							StatusManager.LOG | StatusManager.SHOW);
+					return;
+				}
+				var bounds = button.getBounds();
+				menu.setLocation(toolbar.toDisplay(bounds.x, bounds.y + bounds.height));
+				menu.setVisible(true);
+			});
 		});
 		toolbar.addListener(SWT.Dispose, event -> {
 			service.releaseContributions(manager);
