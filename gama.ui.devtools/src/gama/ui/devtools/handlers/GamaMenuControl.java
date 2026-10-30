@@ -1,12 +1,14 @@
 package gama.ui.devtools.handlers;
 
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.ui.menus.IMenuService;
+import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 
@@ -26,11 +28,12 @@ public final class GamaMenuControl extends WorkbenchWindowControlContribution {
 		else button.setImage(image);
 
 		IMenuService service = getWorkbenchWindow().getService(IMenuService.class);
-		MenuManager manager = new MenuManager();
+		MenuManager manager = new MenuManager("GAMA", "gama.ui.devtools.menu");
+		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
 		service.populateContributionManager(manager, "menu:gama.ui.devtools.menu");
 		var menu = manager.createContextMenu(toolbar);
+		manager.addMenuListener(shown -> manager.updateAll(true));
 		button.addListener(SWT.Selection, event -> {
-			manager.updateAll(true);
 			var bounds = button.getBounds();
 			menu.setLocation(toolbar.toDisplay(bounds.x, bounds.y + bounds.height));
 			menu.setVisible(true);
