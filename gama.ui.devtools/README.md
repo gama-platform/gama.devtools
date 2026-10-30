@@ -118,6 +118,13 @@ the current platform. Tests, signing, deployment and Maven build-cache restorati
 As in GAMA's official build script, the optional Copilot feature is omitted from the snapshot's product.
 This builds the checkout's existing version; it does not bump versions or generate official installers.
 
+After a successful **Rebuild annotation processor**, the tools record SHA-256 fingerprints of the
+annotation/processor inputs and exported JAR in workspace plugin state. Local releases reuse its
+compiled classes only when both fingerprints match the saved snapshot. Maven/Tycho still packages
+and installs the two bundles, preserving its required artifact metadata, but skips their compilation.
+Unverified exports or changed inputs use the normal compilation path. This does not enable
+incremental compilation for the other GAMA bundles.
+
 Follow the **GAMA Local Release** Console and Eclipse's Progress view; cancellation terminates the
 running Maven process and its subprocesses. A complete log is retained in plugin state, including on
 failure. The first build can take considerable time and disk space: it needs room for a source

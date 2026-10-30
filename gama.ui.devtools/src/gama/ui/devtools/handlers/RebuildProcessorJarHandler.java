@@ -32,6 +32,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import gama.ui.devtools.util.GamaProjects;
 import gama.ui.devtools.util.Notifier;
 import gama.ui.devtools.util.ResourceUtils;
+import gama.ui.devtools.release.ProcessorReuse;
 
 /**
  * Regenerates {@code gama.processor/gama.processor.jar} (the annotation processor used by Eclipse in all GAMA plugins)
@@ -57,6 +58,8 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 			return null;
 		}
 		try {
+			var source = proc.getLocation().removeLastSegments(1).toFile().toPath().toRealPath();
+			String inputs = ProcessorReuse.inputs(source, () -> false);
 			JarPackageData data = new JarPackageData();
 			try (InputStream in = desc.getContents(true)) {
 				IJarDescriptionReader reader = data.createJarDescriptionReader(in);
@@ -77,9 +80,12 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 			IStatus status = runnable.getStatus();
 			if (status.getSeverity() == IStatus.ERROR) {
 				ErrorDialog.openError(shell, "GAMA", "The processor jar could not be generated", status);
-			} else {
+			} else if (status.isOK()) {
+				ProcessorReuse.record(source, inputs);
 				Notifier.show("GAMA annotation processor", GamaProjects.PROCESSOR_JAR
 						+ " regenerated. Run 'GAMA > Clean all...' to use it in all the plugins.");
+			} else {
+				ErrorDialog.openError(shell, "GAMA", "The processor export reported problems; release reuse is disabled.", status);
 			}
 		} catch (InvocationTargetException e) {
 			ErrorDialog.openError(shell, "GAMA", "The processor jar could not be generated",

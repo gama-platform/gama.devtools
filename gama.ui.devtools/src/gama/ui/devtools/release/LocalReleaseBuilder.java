@@ -40,8 +40,17 @@ public final class LocalReleaseBuilder {
 			progress.accept("Copying GAMA sources (excluding Git data and build outputs)");
 			copyTree(plan.source(), snapshot, true, canceled);
 			checkCanceled(canceled);
+			boolean reuseProcessor = ProcessorReuse.prepare(plan.source(), snapshot, canceled);
 			plan.configureSnapshot(snapshot);
+			if (reuseProcessor) {
+				progress.accept("Reusing verified Eclipse annotation processor classes");
+				plan.reuseProcessor(snapshot);
+			}
 			List<List<String>> commands = plan.commands(maven, snapshot);
+			if (reuseProcessor) {
+				commands = commands.stream().map(command -> command.stream()
+						.filter(argument -> !argument.equals("clean")).toList()).toList();
+			}
 			for (int i = 0; i < commands.size(); i++) {
 				progress.accept("Building " + List.of("gama.annotations", "gama.processor", "gama.parent").get(i)
 						+ " for " + plan.target().id());

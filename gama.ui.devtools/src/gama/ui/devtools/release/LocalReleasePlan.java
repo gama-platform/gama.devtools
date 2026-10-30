@@ -135,6 +135,25 @@ public record LocalReleasePlan(Path source, Path jdk, Path destination, Target t
 		write(definition, definitionPath);
 	}
 
+	public void reuseProcessor(Path snapshot) throws Exception {
+		for (String module : List.of("gama.annotations", "gama.processor")) {
+			Path pom = snapshot.resolve(module + "/pom.xml");
+			Document document = read(pom);
+			Element compiler = plugin(document, "tycho-compiler-plugin");
+			Element executions = document.createElementNS(document.getDocumentElement().getNamespaceURI(), "executions");
+			Element execution = document.createElementNS(document.getDocumentElement().getNamespaceURI(), "execution");
+			Element id = document.createElementNS(document.getDocumentElement().getNamespaceURI(), "id");
+			id.setTextContent("default-compile");
+			Element phase = document.createElementNS(document.getDocumentElement().getNamespaceURI(), "phase");
+			phase.setTextContent("none");
+			execution.appendChild(id);
+			execution.appendChild(phase);
+			executions.appendChild(execution);
+			compiler.appendChild(executions);
+			write(document, pom);
+		}
+	}
+
 	public List<List<String>> commands(Path mavenHome, Path snapshot) throws IOException {
 		Path boot;
 		try (var jars = Files.list(mavenHome.resolve("boot"))) {
