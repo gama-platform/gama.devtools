@@ -37,7 +37,7 @@ public class CleanAndRebuildHandler extends AbstractHandler {
 		boolean selection = "selection".equals(event.getParameter(SCOPE));
 		List<IProject> targets = selection ? GamaProjects.fromSelection(HandlerUtil.getCurrentSelection(event))
 				: GamaProjects.all();
-		if (targets.isEmpty()) {
+		if (selection && targets.isEmpty()) {
 			Notifier.show("GAMA", selection ? "No GAMA plugin selected" : "No GAMA plugin in the workspace");
 			return null;
 		}

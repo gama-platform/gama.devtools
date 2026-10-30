@@ -19,6 +19,7 @@ import org.eclipse.jdt.launching.IVMInstall;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
+import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -31,6 +32,8 @@ import org.eclipse.swt.widgets.Shell;
 
 import gama.ui.devtools.launch.GamaLaunches.Flavor;
 import gama.ui.devtools.util.ResourceUtils;
+import gama.ui.devtools.install.InstallModel.Kind;
+import gama.ui.devtools.wizards.InstallSourcesWizard;
 
 /** Associates each menu entry with an existing PDE configuration or creates a generated default. */
 public final class GamaLaunchDialog extends TitleAreaDialog {
@@ -149,6 +152,11 @@ public final class GamaLaunchDialog extends TitleAreaDialog {
 	@Override
 	protected void okPressed() {
 		try {
+			if (configuration.getSelectionIndex() == 0 && !GamaLaunches.missingProjects(flavor()).isEmpty()) {
+				new WizardDialog(getShell(), new InstallSourcesWizard(Kind.CORE)).open();
+				refresh();
+				return;
+			}
 			result = choose();
 			if (result != null) { super.okPressed(); }
 		} catch (CoreException e) { error(e); }

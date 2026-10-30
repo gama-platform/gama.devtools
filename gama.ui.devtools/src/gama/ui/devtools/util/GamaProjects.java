@@ -20,6 +20,9 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.core.runtime.Adapters;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.IJavaProject;
@@ -55,6 +58,25 @@ public final class GamaProjects {
 	public static final String MAVEN_NATURE = "org.eclipse.m2e.core.maven2Nature";
 
 	private GamaProjects() {}
+
+	/** Removes workspace registrations only; never deletes project contents. */
+	public static void removeMissingProjects(IProgressMonitor monitor) throws CoreException {
+		IProject[] projects = root().getProjects();
+		SubMonitor progress = SubMonitor.convert(monitor, projects.length);
+		List<String> removed = new ArrayList<>();
+		for (IProject project : projects) {
+			var step = progress.split(1);
+			var location = project.getLocationURI();
+			if (location == null) continue;
+			var store = EFS.getStore(location);
+			if (!store.fetchInfo().exists() || !store.getChild(".project").fetchInfo().exists()) {
+				project.delete(false, true, step);
+				removed.add(project.getName());
+			}
+		}
+		if (!removed.isEmpty()) Notifier.show("GAMA workspace",
+				"Removed missing project references (files were not deleted): " + String.join(", ", removed));
+	}
 
 	/**
 	 * Returns true if the project is open and runs (or should run) the GAML annotation processor.

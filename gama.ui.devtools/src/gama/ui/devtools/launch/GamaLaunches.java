@@ -59,6 +59,58 @@ public final class GamaLaunches {
 
 	private GamaLaunches() {}
 
+	public static Set<String> missingProjects(final Flavor flavor) throws CoreException {
+		Set<String> missing = new LinkedHashSet<>();
+		var root = GamaProjects.root();
+		IFile product = root.getProject("gama.product").getFile(flavor.productFile);
+		if (!product.isAccessible()) {
+			missing.add("gama.product");
+			return missing;
+		}
+		try (var input = product.getContents()) {
+			var spec = ProductLaunchSpec.read(input, Platform.getOS());
+			List<String> features = new ArrayList<>(spec.features());
+			Set<String> visited = new LinkedHashSet<>();
+			for (int i = 0; i < features.size(); i++) {
+				String feature = features.get(i);
+				if (!visited.add(feature)) continue;
+				IFile file = root.getProject(feature).getFile("feature.xml");
+				if (!file.isAccessible()) {
+					missing.add(feature);
+					continue;
+				}
+				var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+				factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+				factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
+				factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+				try (var featureInput = file.getContents()) {
+					var document = factory.newDocumentBuilder().parse(featureInput);
+					for (String tag : List.of("plugin", "includes")) {
+						var entries = document.getElementsByTagName(tag);
+						for (int j = 0; j < entries.getLength(); j++) {
+							String id = ((org.w3c.dom.Element) entries.item(j)).getAttribute("id");
+							if (!id.startsWith("gama.") && !id.startsWith("gaml.")) continue;
+							if (tag.equals("includes")) features.add(id);
+							else {
+								var model = PluginRegistry.findModel(id);
+								if (model == null || model.getUnderlyingResource() == null
+										|| !model.getUnderlyingResource().getProject().isOpen()) missing.add(id);
+							}
+						}
+					}
+				}
+			}
+		} catch (java.io.IOException | javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException e) {
+			throw new CoreException(ResourceUtils.error("Cannot inspect GAMA product requirements.", e));
+		}
+		for (String id : List.of(flavor.bundle, "gama.core", "gama.api")) {
+			var model = PluginRegistry.findModel(id);
+			if (model == null || model.getUnderlyingResource() == null
+					|| !model.getUnderlyingResource().getProject().isOpen()) missing.add(id);
+		}
+		return missing;
+	}
+
 	public static List<ILaunchConfiguration> configurations() throws CoreException {
 		var manager = DebugPlugin.getDefault().getLaunchManager();
 		return List.of(manager.getLaunchConfigurations(manager.getLaunchConfigurationType(

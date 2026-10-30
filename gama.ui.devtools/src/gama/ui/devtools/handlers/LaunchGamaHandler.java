@@ -20,12 +20,15 @@ import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.window.Window;
+import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import gama.ui.devtools.launch.GamaLaunchDialog;
 import gama.ui.devtools.launch.GamaLaunches;
 import gama.ui.devtools.launch.GamaLaunches.Flavor;
 import gama.ui.devtools.util.ResourceUtils;
+import gama.ui.devtools.install.InstallModel.Kind;
+import gama.ui.devtools.wizards.InstallSourcesWizard;
 
 /** Run and Debug share the same configurations and use Eclipse's normal launch infrastructure. */
 public final class LaunchGamaHandler extends AbstractHandler {
@@ -40,6 +43,10 @@ public final class LaunchGamaHandler extends AbstractHandler {
 		try {
 			if ("configure".equals(event.getParameter("gama.ui.devtools.launchMode"))) {
 				new GamaLaunchDialog(shell, flavor).open();
+				return null;
+			}
+			if (!GamaLaunches.missingProjects(flavor).isEmpty()) {
+				new WizardDialog(shell, new InstallSourcesWizard(Kind.CORE)).open();
 				return null;
 			}
 			ILaunchConfiguration config = GamaLaunches.mapped(flavor);

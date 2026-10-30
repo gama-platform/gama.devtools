@@ -63,7 +63,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 	 */
 	public CleanAndRebuildJob(final List<IProject> targets, final boolean wholeWorkspace) {
 		super("Clean and rebuild GAMA plugins");
-		this.targets = targets;
+		this.targets = new ArrayList<>(targets);
 		this.wholeWorkspace = wholeWorkspace;
 		setRule(ResourcesPlugin.getWorkspace().getRoot());
 		setUser(true);
@@ -74,6 +74,13 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 		long start = System.currentTimeMillis();
 		SubMonitor sub = SubMonitor.convert(monitor, getName(), 100);
 		try {
+			sub.subTask("Removing missing project references");
+			GamaProjects.removeMissingProjects(sub.split(2));
+			targets.removeIf(project -> !project.exists() || !project.isOpen());
+			if (wholeWorkspace) {
+				targets.clear();
+				targets.addAll(GamaProjects.all());
+			}
 			sub.subTask("Refreshing workspace");
 			ResourcesPlugin.getWorkspace().getRoot().refreshLocal(IResource.DEPTH_INFINITE, sub.split(5));
 			sub.subTask("Repairing configuration");

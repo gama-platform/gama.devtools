@@ -235,6 +235,7 @@ public class InstallSourcesWizard extends Wizard {
 				try {
 					var workspace = ResourcesPlugin.getWorkspace();
 					SubMonitor sub = SubMonitor.convert(monitor, getName(), 100);
+					gama.ui.devtools.util.GamaProjects.removeMissingProjects(sub.split(2));
 					workspace.getRoot().refreshLocal(IResource.DEPTH_INFINITE, sub.split(10));
 					workspace.build(IncrementalProjectBuilder.CLEAN_BUILD, sub.split(30));
 					workspace.build(IncrementalProjectBuilder.FULL_BUILD, sub.split(60));

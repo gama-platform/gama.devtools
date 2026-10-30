@@ -87,6 +87,10 @@ The Clean and Rebuild All shortcut takes precedence over Eclipse's standard Buil
 key scheme. It always targets all GAMA plugins, regardless of selection. Explicit user bindings and more
 specific editor bindings can still override it; configure these in *Preferences > General > Keys*.
 
+Before refreshing and cleaning, the tools remove Eclipse project registrations whose directory or
+`.project` file no longer exists on disk. Only workspace references are removed, never project files;
+a notification lists the removed references. This also applies to the installation wizard's final build.
+
 ## Building a local GAMA release
 
 Choose **GAMA > Run GAMA > Build local release...**. The source checkout is determined automatically
@@ -220,6 +224,11 @@ Headless arguments are remembered; tests report to Eclipse's Console.
 On first use, select an existing **Eclipse Application** configuration or generate a default with a registered
 **JDK 25**. An exact Java 25 JDK is required because the current product VM arguments enable preview features;
 Eclipse itself can still run on Java 21. Add the JDK in *Preferences > Java > Installed JREs*.
+
+Before Run/Debug, the tools check the product's GAMA feature and plugin projects, including nested
+features. Missing or closed projects open **Install core plugins...** directly instead of attempting
+the launch. Finish the installation and its background build, then run again. Generating a launch
+configuration also offers this installation path when required projects are missing.
 
 Default configurations, named `GAMA - GUI`, `GAMA - Headless` and `GAMA - Tests`, read the workspace
 `gama.product/gama.product` or `gama.product/gama.headless.product`. Import the product project, the feature
