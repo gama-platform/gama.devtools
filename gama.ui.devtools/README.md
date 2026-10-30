@@ -84,7 +84,7 @@ specific editor bindings can still override it; configure these in *Preferences 
 
 Choose **GAMA > Run GAMA > Build local release...**. The source checkout is determined automatically
 from the workspace's `gama.parent` project, which must be imported; there is no source selector.
-Click **Build release...** to choose an existing destination directory **outside** that checkout;
+Click **Choose destination...** in the simple release dialog to choose an existing destination directory **outside** that checkout;
 canceling the destination chooser leaves the build dialog open without starting a build.
 The destination chooser remembers the previous destination. Eclipse prompts to save modified editors before starting. The build uses
 the saved files on disk, including local source changes; it does not fetch, switch branches, modify

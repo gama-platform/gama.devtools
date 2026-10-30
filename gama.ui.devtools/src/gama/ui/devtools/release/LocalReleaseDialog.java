@@ -5,7 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.dialogs.TitleAreaDialog;
+import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -22,7 +23,7 @@ import gama.ui.devtools.preferences.DevToolsPreferences;
 import gama.ui.devtools.util.GamaProjects;
 
 /** Chooses build inputs once; a release always targets the current Eclipse environment. */
-public final class LocalReleaseDialog extends TitleAreaDialog {
+public final class LocalReleaseDialog extends Dialog {
 
 	private final LocalReleasePlan.Target target;
 	private final List<Path> jdks = new ArrayList<>();
@@ -39,15 +40,24 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 	public LocalReleasePlan result() { return result; }
 
 	@Override
+	protected void configureShell(Shell shell) {
+		super.configureShell(shell);
+		shell.setText("Build a local GAMA release");
+	}
+
+	@Override
 	protected Control createDialogArea(Composite parent) {
 		Composite area = (Composite) super.createDialogArea(parent);
-		setTitle("Build a local GAMA release");
-		setMessage("The release will be built using the plugins present in the workspace. "
-				+ "The first build might take more time. "
-				+ "Note that this produces an unsigned application, which can only be run locally");
 		Composite content = new Composite(area, SWT.NONE);
 		content.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		content.setLayout(new GridLayout(3, false));
+		Label message = new Label(content, SWT.WRAP);
+		GridData messageData = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
+		messageData.widthHint = 550;
+		message.setLayoutData(messageData);
+		message.setText("The release will be built using the plugins present in the workspace. "
+				+ "The first build might take more time. "
+				+ "Note that this produces an unsigned application, which can only be run locally");
 		addJdk(Path.of(System.getProperty("java.home")), "Eclipse runtime");
 		for (var vm : GamaLaunches.jdks()) addJdk(vm.getInstallLocation().toPath(), vm.getName());
 		if (jdks.size() == 1) return area;
@@ -70,9 +80,8 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 				LocalReleasePlan.validateJdk(path, target);
 				addJdk(path, "Selected JDK");
 				jdk.select(jdks.indexOf(path));
-				setErrorMessage(null);
 			} catch (java.io.IOException | IllegalArgumentException ex) {
-				setErrorMessage(ex.getMessage());
+				MessageDialog.openError(getShell(), "Build a local GAMA release", ex.getMessage());
 			}
 		});
 		return area;
@@ -114,13 +123,13 @@ public final class LocalReleaseDialog extends TitleAreaDialog {
 			DevToolsPreferences.store().setValue("release.destination", result.destination().toString());
 			super.okPressed();
 		} catch (Exception e) {
-			setErrorMessage(e.getMessage());
+			MessageDialog.openError(getShell(), "Build a local GAMA release", e.getMessage());
 		}
 	}
 
 	@Override
 	protected void createButtonsForButtonBar(Composite parent) {
-		createButton(parent, IDialogConstants.OK_ID, "Build release...", true);
+		createButton(parent, IDialogConstants.OK_ID, "Choose destination...", true);
 		createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CANCEL_LABEL, false);
 	}
 }
