@@ -95,16 +95,16 @@ a notification lists the removed references. This also applies to the installati
 
 Choose **GAMA > Run GAMA > Build local release...**. The source checkout is determined automatically
 from the workspace's `gama.parent` project, which must be imported; there is no source selector.
-Click **Choose destination...** in the simple release dialog to choose an existing destination directory **outside** that checkout;
-canceling the destination chooser leaves the build dialog open without starting a build.
+The native destination chooser opens directly, with the release explanation as its prompt.
+Choose an existing destination directory **outside** that checkout; canceling does not start a build.
 The destination chooser remembers the previous destination. Eclipse prompts to save modified editors before starting. The build uses
 the saved files on disk, including local source changes; it does not fetch, switch branches, modify
 the checkout, or run the checkout's platform-wide packaging scripts.
 
-The dialog prefers Eclipse's Java runtime when it is a **full JDK 25** matching the current environment.
-When exactly one compatible JDK is available, it is used automatically and the JDK controls are hidden.
-Otherwise choose a JDK 25 from Eclipse's *Installed JREs*, or browse to its home directory
-(`Contents/Home` inside a macOS JDK). A JRE or Java 21 is sufficient for running the developer tools,
+The build automatically uses Eclipse's Java runtime when it is a **full JDK 25** matching the current environment.
+Otherwise it uses the first compatible JDK 25 in Eclipse's *Installed JREs*.
+If none is available, an error directs you to configure one there.
+A JRE or Java 21 is sufficient for running the developer tools,
 but cannot compile GAMA. Only the current Eclipse OS/architecture is built: macOS Intel/Apple Silicon,
 Windows x86-64, or Linux x86-64. Unsupported environments are reported instead of falling back to
 another platform.
