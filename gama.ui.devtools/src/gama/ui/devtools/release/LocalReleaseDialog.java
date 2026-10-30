@@ -38,9 +38,11 @@ public final class LocalReleaseDialog {
 			Path jdk = selectJdk();
 			DirectoryDialog destination = new DirectoryDialog(shell);
 			destination.setText("Save local GAMA release");
-			destination.setMessage("The release will be built using the plugins present in the workspace. "
-					+ "The first build might take more time. "
-					+ "Note that this produces an unsigned application, which can only be run locally");
+			destination.setMessage("Build the GUI product in gama.product/gama.product from the Maven modules registered "
+					+ "in gama.parent/pom.xml. A plugin is included only through a feature reachable from that product; "
+					+ "use the plugin's context menu > GAMA > Add to GAMA build... to integrate workspace plugins. "
+					+ "External workspace modules are staged in the private release snapshot. "
+					+ "The first build may take more time. Note that this produces an unsigned application.");
 			destination.setFilterPath(DevToolsPreferences.get("release.destination"));
 			String selected = destination.open();
 			if (selected == null) return Window.CANCEL;

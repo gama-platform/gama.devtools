@@ -1,6 +1,6 @@
 # GAMA Developer Tools (`gama.ui.devtools`)
 
-An Eclipse plugin for the developers of GAMA. It adds a **GAMA** menu to the menu bar and a **GAMA** sub-menu to the context menu of GAMA plugins, with **Clean...**, **Update headers...** and **Report missing annotations...** applied to the selected plugins.
+An Eclipse plugin for the developers of GAMA. It adds a **GAMA** menu to the menu bar and a **GAMA** sub-menu to the context menu of GAMA plugins, with **Add to GAMA build...**, **Clean...**, **Update headers...** and **Report missing annotations...** applied to the selected plugin.
 
 ## Installation
 
@@ -72,6 +72,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Clean GAMA plugins** (`Cmd+B` on macOS, `Ctrl+B` on Windows/Linux) | Saves the editors, refreshes the whole workspace recursively from disk and automatically repairs the plugins configuration (see *Configuration checks*). Disables the annotation processor, deletes the `gaml/` folders and re-enables the processor. These steps only affect the GAMA plugins. Then runs a clean build and a full build of the whole workspace, and checks that every `GamlAdditions.java` was regenerated. The configuration is checked again afterwards: remaining problems appear in the Problems view, with quick fixes (`Ctrl/Cmd+1`). No dialog is shown and the job can be cancelled. |
 | **Clean...** (context menu) | The same, limited to the GAMA plugins in the selection: only they are reset, cleaned and rebuilt. The initial refresh still covers the whole workspace. |
 | **Run GAMA > Build local release...** | Builds a runnable GAMA folder for the current OS and architecture, using a privately managed Maven and including JDK 25. Choose the source checkout, JDK and destination (see below). |
+| **Add to GAMA build...** (plugin context menu) | Adds the selected bundle to the Maven reactor and either reuses a feature that declares it or creates a dedicated feature, then ensures that feature is reachable from `gama.product/gama.product`. It is disabled only when the plugin and containing feature are already Maven-integrated and the feature is already in the GUI product. |
 | **Rebuild annotation processor** | Regenerates `gama.processor/gama.processor.jar` from `Generate Processor.jardesc`. Use it after modifying `gama.processor` or `gama.annotations`. |
 | **Regenerate Xtext grammar** | Runs `gaml.grammar/src/gaml/grammar/generator/Generate_GAML_Artefacts.mwe2` to regenerate the GAML grammar artifacts. The `gaml.grammar`, `gaml.compiler` and `gama.ui.editor` projects must be open. |
 | **Update file headers** | Sets the GAMA version and copyright end year, updates existing headers and adds missing ones, with a mandatory per-file preview and undo. |
@@ -115,9 +116,13 @@ and cached in the plugin's workspace state. Maven's normal local dependency cach
 access is required for the initial download and any uncached Maven/p2 dependencies. The extension's
 `org.eclipse.ui.console` dependency is declared explicitly and resolved by the normal Tycho build.
 
-The background job snapshots the sources into plugin state (excluding `.git`, `.metadata`, `target`
-and `bin`), then installs `gama.annotations`, `gama.processor`, and finally `gama.parent`, following
-GAMA's build order. The snapshot's target environments and product packaging tasks are restricted to
+The background job snapshots the checkout sources into plugin state (excluding `.git`, `.metadata`, `target`
+and `bin`), then stages any Maven reactor modules registered in `gama.parent/pom.xml` but located outside
+the checkout into that private snapshot. Those external modules are built from the staged copies, not from
+their original workspace locations. It then installs `gama.annotations`, `gama.processor`, and finally
+`gama.parent`, following GAMA's build order. Only Maven modules in the parent reactor and bundles in features
+reachable from the GUI product are included. Use **Add to GAMA build...** on a workspace plugin to add those
+Maven, feature and product links. The snapshot's target environments and product packaging tasks are restricted to
 the current platform. Tests, signing, deployment and Maven build-cache restoration are disabled.
 As in GAMA's official build script, the optional Copilot feature is omitted from the snapshot's product.
 This builds the checkout's existing version; it does not bump versions or generate official installers.

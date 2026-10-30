@@ -49,6 +49,7 @@ public final class LocalReleaseBuilder {
 			progress.accept("Copying GAMA sources (excluding Git data and build outputs)");
 			copyTree(plan.source(), snapshot, true, canceled);
 			checkCanceled(canceled);
+			plan.stageExternalModules(snapshot, canceled);
 			boolean reuseProcessor = ProcessorReuse.prepare(plan.source(), snapshot, canceled);
 			plan.configureSnapshot(snapshot);
 			if (reuseProcessor) {

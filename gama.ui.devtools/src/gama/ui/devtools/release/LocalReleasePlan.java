@@ -66,6 +66,57 @@ public record LocalReleasePlan(Path source, Path jdk, Path destination, Target t
 		}
 	}
 
+	/**
+	 * Stages Maven reactor modules that are registered in the workspace but live outside the checkout. The release
+	 * snapshot is self-contained: it never builds from, or writes generated files into, those workspace projects.
+	 */
+	public void stageExternalModules(final Path snapshot,
+			final java.util.function.BooleanSupplier canceled) throws Exception {
+		Path sourceParent = source.resolve("gama.parent/pom.xml");
+		Path snapshotParent = snapshot.resolve("gama.parent/pom.xml");
+		Document sourcePom = read(sourceParent);
+		Document snapshotPom = read(snapshotParent);
+		Element sourceModules = child(sourcePom.getDocumentElement(), "modules");
+		Element snapshotModules = child(snapshotPom.getDocumentElement(), "modules");
+		if (sourceModules == null || snapshotModules == null) {
+			throw new IOException("gama.parent/pom.xml has no Maven <modules> element.");
+		}
+		List<Element> modules = children(sourceModules);
+		List<Element> copiedModules = children(snapshotModules);
+		if (modules.size() != copiedModules.size()) {
+			throw new IOException("The release snapshot's Maven module list does not match the workspace source.");
+		}
+		Path sourceRoot = source.toRealPath();
+		Path overlayRoot = snapshot.resolve("workspace-modules");
+		boolean changed = false;
+		for (int i = 0; i < modules.size(); i++) {
+			Element sourceModule = modules.get(i);
+			Element snapshotModule = copiedModules.get(i);
+			if (!"module".equals(localName(sourceModule))) continue;
+			String module = sourceModule.getTextContent().strip();
+			if (module.isEmpty()) throw new IOException("gama.parent/pom.xml contains an empty module entry.");
+			Path modulePath = sourceParent.getParent().resolve(module).toAbsolutePath().normalize();
+			if (!Files.exists(modulePath)) {
+				throw new IOException("The Maven module registered in gama.parent/pom.xml does not exist: " + modulePath);
+			}
+			Path realModule = modulePath.toRealPath();
+			if (realModule.startsWith(sourceRoot)) continue;
+			if (!Files.isRegularFile(realModule.resolve("pom.xml"))) {
+				throw new IOException("The external Maven module has no pom.xml: " + realModule);
+			}
+			LocalReleaseBuilder.checkCanceled(canceled);
+			String stagedName = String.format(java.util.Locale.ROOT, "%03d-%s", i + 1,
+					realModule.getFileName().toString().replaceAll("[^A-Za-z0-9._-]", "_"));
+			Path staged = overlayRoot.resolve(stagedName);
+			LocalReleaseBuilder.copyTree(realModule, staged, true, canceled);
+			repairParentPath(staged, snapshot.resolve("gama.parent"));
+			Path relative = snapshotParent.getParent().relativize(staged);
+			snapshotModule.setTextContent(relative.toString().replace('\\', '/'));
+			changed = true;
+		}
+		if (changed) write(snapshotPom, snapshotParent);
+	}
+
 	public static void validateJdk(Path home, Target target) throws IOException {
 		Properties properties = new Properties();
 		try (var input = Files.newInputStream(home.resolve("release"))) { properties.load(input); }
@@ -205,6 +256,26 @@ public record LocalReleasePlan(Path source, Path jdk, Path destination, Target t
 			if (name.equals(element.getLocalName() == null ? element.getTagName() : element.getLocalName())) return element;
 		}
 		return null;
+	}
+
+	private static void repairParentPath(final Path module, final Path parentProject) throws Exception {
+		Path pom = module.resolve("pom.xml");
+		Document document = read(pom);
+		Element parent = child(document.getDocumentElement(), "parent");
+		if (parent == null || !text(parent, "groupId").equals("org.gama")
+				|| !text(parent, "artifactId").equals("gama.parent")) return;
+		Element relative = child(parent, "relativePath");
+		if (relative == null) {
+			relative = document.createElementNS(document.getDocumentElement().getNamespaceURI(), "relativePath");
+			parent.appendChild(relative);
+		}
+		relative.setTextContent(module.toAbsolutePath().normalize().relativize(parentProject.toAbsolutePath().normalize())
+				.toString().replace('\\', '/'));
+		write(document, pom);
+	}
+
+	private static String localName(final Element element) {
+		return element.getLocalName() == null ? element.getTagName() : element.getLocalName();
 	}
 
 	private static String text(Element parent, String... names) {

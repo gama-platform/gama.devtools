@@ -14,6 +14,8 @@
             name="Report an issue..." description="Opens the GAMA Developer Tools new issue page in your web browser"/>
       <command id="gama.ui.devtools.buildLocalRelease" categoryId="gama.ui.devtools.category"
             name="Build local release..." description="Builds GAMA for this environment with an automatically managed Maven and saves a runnable release with JDK 25"/>
+      <command id="gama.ui.devtools.addToGamaBuild" categoryId="gama.ui.devtools.category"
+            name="Add to GAMA build..." description="Integrates a workspace plugin in the GAMA Maven reactor and GUI product"/>
       <command id="gama.ui.devtools.launchGama" categoryId="gama.ui.devtools.category"
             name="Launch GAMA" description="Run or debug workspace GAMA using a standard Eclipse Application configuration">
          <commandParameter id="gama.ui.devtools.launchFlavor" name="Flavor (GUI, HEADLESS, TESTS)" optional="true"/>
@@ -57,6 +59,20 @@
    <extension point="org.eclipse.ui.handlers">
       <handler commandId="gama.ui.devtools.launchGama" class="gama.ui.devtools.handlers.LaunchGamaHandler"/>
       <handler commandId="gama.ui.devtools.buildLocalRelease" class="gama.ui.devtools.handlers.BuildLocalReleaseHandler"/>
+      <handler commandId="gama.ui.devtools.addToGamaBuild" class="gama.ui.devtools.handlers.AddToGamaBuildHandler">
+         <enabledWhen>
+            <with variable="selection">
+               <iterate ifEmpty="false" operator="or">
+                  <adapt type="org.eclipse.core.resources.IProject">
+                     <and>
+                        <test property="gama.ui.devtools.gamaPlugin" forcePluginActivation="true"/>
+                        <test property="gama.ui.devtools.needsBuildIntegration" forcePluginActivation="true"/>
+                     </and>
+                  </adapt>
+               </iterate>
+            </with>
+         </enabledWhen>
+      </handler>
       <handler commandId="gama.ui.devtools.cleanAndRebuild" class="gama.ui.devtools.handlers.CleanAndRebuildHandler"/>
       <handler commandId="gama.ui.devtools.gamlReport" class="gama.ui.devtools.handlers.GamlReportHandler"/>
       <handler commandId="gama.ui.devtools.generateTestStubs" class="gama.ui.devtools.handlers.GenerateTestStubsHandler"/>
@@ -213,6 +229,7 @@
       </menuContribution>
       <menuContribution locationURI="popup:org.eclipse.ui.popup.any?after=additions">
          <menu id="gama.ui.devtools.popup" label="GAMA" icon="icons/gama.png">
+            <command commandId="gama.ui.devtools.addToGamaBuild" style="push"/>
             <command commandId="gama.ui.devtools.cleanAndRebuild" label="Clean..." style="push">
                <parameter name="gama.ui.devtools.scope" value="selection"/>
             </command>
@@ -233,7 +250,7 @@
 
    <extension point="org.eclipse.core.expressions.propertyTesters">
       <propertyTester id="gama.ui.devtools.gamaProjectTester" class="gama.ui.devtools.util.GamaProjectTester"
-            namespace="gama.ui.devtools" properties="gamaPlugin" type="org.eclipse.core.resources.IProject"/>
+            namespace="gama.ui.devtools" properties="gamaPlugin,needsBuildIntegration" type="org.eclipse.core.resources.IProject"/>
    </extension>
 
    <!-- New wizards (also available in File > New > Other...) -->

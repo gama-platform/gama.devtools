@@ -13,13 +13,29 @@ package gama.ui.devtools.util;
 import org.eclipse.core.expressions.PropertyTester;
 import org.eclipse.core.resources.IProject;
 
-/** Tests whether a project is a GAMA plugin (property {@code gama.ui.devtools.gamaPlugin}). */
+/** Tests GAMA project properties used by context-menu contributions. */
 public class GamaProjectTester extends PropertyTester {
 
 	@Override
 	public boolean test(final Object receiver, final String property, final Object[] args,
 			final Object expectedValue) {
-		return receiver instanceof IProject project && GamaProjects.isGamaPlugin(project);
+		if (!(receiver instanceof IProject project)) return false;
+		if ("gamaPlugin".equals(property)) return GamaProjects.isGamaPlugin(project);
+		if ("needsBuildIntegration".equals(property) && GamaProjects.isGamaPlugin(project)) {
+			try {
+				var analysis = GamaBuildIntegration.analyze(project);
+				if (!analysis.pluginMavenIntegrated()) return true;
+				for (var feature : analysis.containingFeatures()) {
+					if (GamaBuildIntegration.mavenIntegrated(feature.project())
+							&& GamaBuildIntegration.reachable(feature.id(), analysis.productFeatures())) return false;
+				}
+				return true;
+			} catch (org.eclipse.core.runtime.CoreException e) {
+				ResourceUtils.log(e);
+				return true;
+			}
+		}
+		return false;
 	}
 
 }
