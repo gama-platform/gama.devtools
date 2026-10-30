@@ -18,7 +18,7 @@ import gama.ui.devtools.GamaDevToolsActivator;
 public final class ProcessorReuse {
 
 	private static final List<String> MODULES = List.of("gama.annotations", "gama.processor");
-	private static final Set<String> EXCLUDED = Set.of(".git", "bin", "target", "gama.processor.jar");
+	private static final Set<String> EXCLUDED = Set.of(".git", "bin", "target", "gama.processor.jar", ".DS_Store");
 
 	private ProcessorReuse() {}
 

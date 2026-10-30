@@ -124,6 +124,8 @@ compiled classes only when both fingerprints match the saved snapshot. Maven/Tyc
 and installs the two bundles, preserving its required artifact metadata, but skips their compilation.
 Unverified exports or changed inputs use the normal compilation path. This does not enable
 incremental compilation for the other GAMA bundles.
+macOS `.DS_Store` files are excluded from processor exports and input fingerprints, preventing
+duplicate Finder metadata entries without suppressing genuine export warnings.
 
 Follow the **GAMA Local Release** Console and Eclipse's Progress view; cancellation terminates the
 running Maven process and its subprocesses. A complete log is retained in plugin state, including on

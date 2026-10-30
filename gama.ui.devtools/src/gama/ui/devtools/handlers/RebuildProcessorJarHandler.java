@@ -11,7 +11,9 @@
 package gama.ui.devtools.handlers;
 
 import java.io.InputStream;
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
+import java.util.zip.ZipFile;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -20,10 +22,16 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jdt.ui.jarpackager.IJarDescriptionReader;
+import org.eclipse.jdt.ui.jarpackager.IJarBuilder;
+import org.eclipse.jdt.ui.jarpackager.IJarBuilderExtension;
+import org.eclipse.jdt.ui.jarpackager.IManifestProvider;
 import org.eclipse.jdt.ui.jarpackager.IJarExportRunnable;
 import org.eclipse.jdt.ui.jarpackager.JarPackageData;
 import org.eclipse.swt.widgets.Shell;
@@ -74,6 +82,7 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 			data.setOverwrite(true);
 			data.setSaveDescription(false);
 			data.setSaveManifest(false);
+			data.setJarBuilder(new ProcessorJarBuilder(data.getJarBuilder()));
 			IJarExportRunnable runnable = data.createJarExportRunnable(shell);
 			new ProgressMonitorDialog(shell).run(true, true, runnable);
 			proc.refreshLocal(IResource.DEPTH_ONE, null);
@@ -97,6 +106,49 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 					ResourceUtils.error(e.getMessage(), e));
 		}
 		return null;
+	}
+
+	private static final class ProcessorJarBuilder implements IJarBuilder, IJarBuilderExtension {
+
+		private final IJarBuilder delegate;
+
+		ProcessorJarBuilder(IJarBuilder delegate) { this.delegate = delegate; }
+
+		@Override
+		public String getId() { return delegate.getId(); }
+
+		@Override
+		public IManifestProvider getManifestProvider() { return delegate.getManifestProvider(); }
+
+		@Override
+		public void open(JarPackageData data, Shell shell, MultiStatus status) throws CoreException {
+			delegate.open(data, shell, status);
+		}
+
+		@Override
+		public void writeFile(IFile file, IPath destination) throws CoreException {
+			if (!".DS_Store".equals(file.getName()) && !".DS_Store".equals(destination.lastSegment())) {
+				delegate.writeFile(file, destination);
+			}
+		}
+
+		@Override
+		public void writeFile(File file, IPath destination) throws CoreException {
+			if (".DS_Store".equals(file.getName()) || ".DS_Store".equals(destination.lastSegment())) return;
+			if (delegate instanceof IJarBuilderExtension extension) {
+				extension.writeFile(file, destination);
+			} else {
+				throw new CoreException(ResourceUtils.error("The JAR exporter cannot export compiled files.", null));
+			}
+		}
+
+		@Override
+		public void writeArchive(ZipFile archive, IProgressMonitor monitor) {
+			delegate.writeArchive(archive, monitor);
+		}
+
+		@Override
+		public void close() throws CoreException { delegate.close(); }
 	}
 
 }
