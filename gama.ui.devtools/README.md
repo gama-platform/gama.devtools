@@ -214,8 +214,10 @@ projects listed by the product, and their GAMA plugins, and resolve the GAMA tar
 the required projects; PDE validates bundle dependencies at launch. No GAMA binaries are bundled in devtools.
 Generated defaults use feature-based plugin selection, the product's common and OS-specific VM/program
 arguments, startup levels, and configuration properties. `${build.id}` becomes `development` for these
-workspace launches. The product's `-data` argument is replaced by a separate runtime workspace per flavor,
-located beside the development workspace (`gama-runtime-gui`, `gama-runtime-headless`, `gama-runtime-tests`).
+workspace launches. GUI launches preserve the product's `-data @noDefault`, allowing GAMA to select
+and initialize its workspace normally rather than forcing an uninitialized PDE runtime directory.
+Headless and test launches replace the product's `-data` argument with separate runtime workspaces,
+located beside the development workspace (`gama-runtime-headless`, `gama-runtime-tests`).
 They do not clear runtime workspaces automatically.
 
 **Run GAMA > Configure...** lets you select each flavor and change its associated configuration. **Edit
@@ -223,6 +225,8 @@ configuration...** opens Eclipse's standard launch properties, including JRE, me
 Existing configurations and customizations are never automatically rewritten. **Restore generated defaults...**
 asks for confirmation, then creates and selects a fresh configuration; the old configuration is retained.
 New product settings are picked up when generating defaults, not silently applied to existing configurations.
+For GUI configurations generated before the workspace-selection fix, use **Restore generated defaults...**
+once to create and select a corrected configuration, or add `-data @noDefault` to the existing program arguments.
 These launch commands require the Eclipse Debug, Java launching and PDE launching bundles, installed as
 devtools dependencies. They use public Eclipse APIs rather than version-specific PDE implementation classes.
 

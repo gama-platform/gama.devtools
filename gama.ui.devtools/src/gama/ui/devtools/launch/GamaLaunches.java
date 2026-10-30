@@ -159,7 +159,9 @@ public final class GamaLaunches {
 		copy.setAttribute(IPDELauncherConstants.CONFIG_USE_DEFAULT_AREA, true);
 		copy.setAttribute(IPDELauncherConstants.CONFIG_GENERATE_DEFAULT, true);
 		copy.setAttribute(IPDELauncherConstants.CONFIG_CLEAR_AREA, false);
-		copy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_WORKING_DIRECTORY, runtime);
+		if (flavor != Flavor.GUI) {
+			copy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_WORKING_DIRECTORY, runtime);
+		}
 		copy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_JRE_CONTAINER_PATH,
 				JavaRuntime.newJREContainerPath(vm).toPortableString());
 		copy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_SOURCE_PATH_PROVIDER, PDESourcePathProvider.ID);
@@ -170,11 +172,13 @@ public final class GamaLaunches {
 		}
 		copy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS, vmArguments);
 		List<String> args = new ArrayList<>(Arrays.asList(DebugPlugin.parseArguments(spec.programArguments())));
-		for (int i = 0; i < args.size();) {
-			if (args.get(i).equals("-data")) {
-				args.remove(i);
-				if (i < args.size()) { args.remove(i); }
-			} else { i++; }
+		if (flavor != Flavor.GUI) {
+			for (int i = 0; i < args.size();) {
+				if (args.get(i).equals("-data")) {
+					args.remove(i);
+					if (i < args.size()) { args.remove(i); }
+				} else { i++; }
+			}
 		}
 		String program = DebugPlugin.renderArguments(args.toArray(String[]::new), null);
 		program += " -consoleLog";
