@@ -132,6 +132,9 @@ running Maven process and its subprocesses. A complete log is retained in plugin
 failure. The first build can take considerable time and disk space: it needs room for a source
 snapshot, Maven dependencies, product build outputs, and the final product with a copied JDK.
 Temporary snapshots and incomplete destination folders are removed when the job finishes.
+Cleanup retries if files appear during deletion (for example macOS Finder metadata).
+If temporary files still cannot be removed, their path is recorded in Eclipse's Error Log;
+this warning does not turn an already produced release into a failed build.
 
 On success, `Gama.app` is placed directly in the chosen destination on macOS.
 On Windows and Linux, a `Gama` folder is placed there, containing the launcher

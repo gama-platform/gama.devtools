@@ -6,7 +6,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
@@ -20,6 +23,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.ui.statushandlers.StatusManager;
+
+import gama.ui.devtools.GamaDevToolsActivator;
 
 /** Builds only a private snapshot, publishing a complete runnable folder without overwriting existing releases. */
 public final class LocalReleaseBuilder {
@@ -64,12 +73,7 @@ public final class LocalReleaseBuilder {
 			failure = e;
 			throw e;
 		} finally {
-			try {
-				deleteTree(work);
-			} catch (IOException cleanup) {
-				if (failure != null) failure.addSuppressed(cleanup);
-				else throw cleanup;
-			}
+			cleanup(work, failure, output);
 		}
 	}
 
@@ -134,6 +138,7 @@ public final class LocalReleaseBuilder {
 				: plan.target().windows() ? "Gama.exe" : "Gama");
 		if (!Files.isRegularFile(executable)) throw new IOException("The native product was not produced: " + executable);
 		Path staging = Files.createTempDirectory(plan.destination(), ".gama-release-");
+		Throwable failure = null;
 		try {
 			copyTree(product, staging, false, canceled);
 			// Cocoa loads the JVM as a bundle: copying only Contents/Home breaks the native launcher.
@@ -163,8 +168,11 @@ public final class LocalReleaseBuilder {
 			}
 			Files.move(plan.target().mac() ? staging.resolve("Gama.app") : staging, destination);
 			return destination;
+		} catch (IOException | RuntimeException | Error e) {
+			failure = e;
+			throw e;
 		} finally {
-			deleteTree(staging);
+			cleanup(staging, failure, message -> {});
 		}
 	}
 
@@ -213,15 +221,43 @@ public final class LocalReleaseBuilder {
 	}
 
 	static void deleteTree(Path directory) throws IOException {
-		if (!Files.exists(directory)) return;
+		for (int attempt = 0; ; attempt++) {
+			try {
+				deleteTreeOnce(directory);
+				return;
+			} catch (DirectoryNotEmptyException e) {
+				if (attempt >= 3) throw e;
+			}
+		}
+	}
+
+	private static void cleanup(Path directory, Throwable failure, Consumer<String> output) {
+		try {
+			deleteTree(directory);
+		} catch (IOException e) {
+			if (failure != null) failure.addSuppressed(e);
+			String message = "Could not remove temporary release build files at " + directory
+					+ ". You can remove this temporary directory after the build has finished.";
+			output.accept("\nWarning: " + message + "\n");
+			StatusManager.getManager().handle(
+					new Status(IStatus.WARNING, GamaDevToolsActivator.PLUGIN_ID, message, e), StatusManager.LOG);
+		}
+	}
+
+	private static void deleteTreeOnce(Path directory) throws IOException {
+		if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) return;
 		Files.walkFileTree(directory, new SimpleFileVisitor<>() {
 			@Override public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
-				Files.delete(file);
+				Files.deleteIfExists(file);
+				return FileVisitResult.CONTINUE;
+			}
+			@Override public FileVisitResult visitFileFailed(Path file, IOException error) throws IOException {
+				if (!(error instanceof NoSuchFileException)) throw error;
 				return FileVisitResult.CONTINUE;
 			}
 			@Override public FileVisitResult postVisitDirectory(Path dir, IOException error) throws IOException {
-				if (error != null) throw error;
-				Files.delete(dir);
+				if (error != null && !(error instanceof NoSuchFileException)) throw error;
+				Files.deleteIfExists(dir);
 				return FileVisitResult.CONTINUE;
 			}
 		});
