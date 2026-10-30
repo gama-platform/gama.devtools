@@ -126,6 +126,8 @@ Maven, feature and product links. The snapshot's target environments and product
 the current platform. Tests, signing, deployment and Maven build-cache restoration are disabled.
 As in GAMA's official build script, the optional Copilot feature is omitted from the snapshot's product.
 This builds the checkout's existing version; it does not bump versions or generate official installers.
+Maven runs with `-T 1C` (one reactor worker per available processor), building independent modules
+in parallel while respecting dependencies. The annotations, processor and parent stages remain sequential.
 
 After a successful **Rebuild annotation processor**, the tools record SHA-256 fingerprints of the
 annotation/processor inputs and exported JAR in workspace plugin state. Local releases reuse its

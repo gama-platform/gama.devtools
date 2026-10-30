@@ -38,11 +38,8 @@ public final class LocalReleaseDialog {
 			Path jdk = selectJdk();
 			DirectoryDialog destination = new DirectoryDialog(shell);
 			destination.setText("Save local GAMA release");
-			destination.setMessage("Build the GUI product in gama.product/gama.product from the Maven modules registered "
-					+ "in gama.parent/pom.xml. A plugin is included only through a feature reachable from that product; "
-					+ "use the plugin's context menu > GAMA > Add to GAMA build... to integrate workspace plugins. "
-					+ "External workspace modules are staged in the private release snapshot. "
-					+ "The first build may take more time. Note that this produces an unsigned application.");
+			destination.setMessage("Build a local release of GAMA.\n"
+					+ "To integrate a custom plugin, use the navigator context menu \"GAMA > Add to GAMA Build...\".");
 			destination.setFilterPath(DevToolsPreferences.get("release.destination"));
 			String selected = destination.open();
 			if (selected == null) return Window.CANCEL;

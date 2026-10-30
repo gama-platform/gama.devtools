@@ -220,6 +220,7 @@ public record LocalReleasePlan(Path source, Path jdk, Path destination, Target t
 					"-Dmaven.multiModuleProjectDirectory=" + snapshot,
 					"-cp", boot.toString(), "org.codehaus.plexus.classworlds.launcher.Launcher",
 					"--batch-mode", "--no-transfer-progress", "--errors", "-Dstyle.color=never",
+					"-T", "1C",
 					"-f", snapshot.resolve(module + "/pom.xml").toString(),
 					"-P", "local-dev,!p2Repo", "-DskipTests", "-Dmaven.jarsigner.skip=true",
 					"-Dmaven.build.cache.enabled=false",
