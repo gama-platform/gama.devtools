@@ -2,9 +2,9 @@
 <?compositeMetadataRepository version="1.0.0"?>
 <repository name="GAMA Developer Tools" type="org.eclipse.equinox.internal.p2.metadata.repository.CompositeMetadataRepository" version="1.0.0">
   <properties size="1">
-    <property name="p2.timestamp" value="1793288203582" />
+    <property name="p2.timestamp" value="1793330619060" />
   </properties>
-  <children size="14">
+  <children size="15">
     <child location="releases/40651954055-1" />
     <child location="releases/40723076874-1" />
     <child location="releases/40802123245-1" />
@@ -19,5 +19,6 @@
     <child location="releases/40879619909-1" />
     <child location="releases/40880399094-1" />
     <child location="releases/40903231220-1" />
+    <child location="releases/40997073017-1" />
   </children>
 </repository>
