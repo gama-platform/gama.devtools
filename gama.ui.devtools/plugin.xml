@@ -98,6 +98,28 @@
 
    <!-- Menus -->
    <extension point="org.eclipse.ui.menus">
+      <menuContribution locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
+         <toolbar id="gama.ui.devtools.toolbar" label="GAMA">
+            <command commandId="gama.ui.devtools.cleanAndRebuild" label="Clean GAMA plugins"
+                  icon="icons/clean.png" tooltip="Clean and rebuild all GAMA plugins" style="push">
+               <parameter name="gama.ui.devtools.scope" value="all"/>
+            </command>
+            <command commandId="gama.ui.devtools.launchGama" label="Run GAMA UI"
+                  icon="icons/run.png" tooltip="Run GAMA UI (configure on first use)" style="push">
+               <parameter name="gama.ui.devtools.launchFlavor" value="GUI"/>
+               <parameter name="gama.ui.devtools.launchMode" value="run"/>
+            </command>
+            <command commandId="gama.ui.devtools.launchGama" label="Debug GAMA UI"
+                  icon="icons/debug.png" tooltip="Debug GAMA UI (configure on first use)" style="push">
+               <parameter name="gama.ui.devtools.launchFlavor" value="GUI"/>
+               <parameter name="gama.ui.devtools.launchMode" value="debug"/>
+            </command>
+            <command commandId="gama.ui.devtools.buildLocalRelease" label="Export GAMA release..."
+                  icon="icons/export.png" tooltip="Build and export a local GAMA release..." style="push"/>
+            <command commandId="gama.ui.devtools.findKeyword" label="Search GAML keyword..."
+                  icon="icons/search.png" tooltip="Search for a GAML keyword implementation..." style="push"/>
+         </toolbar>
+      </menuContribution>
       <menuContribution locationURI="menu:org.eclipse.ui.main.menu?after=additions">
          <menu id="gama.ui.devtools.menu" label="GAMA" mnemonic="G">
             <menu id="gama.ui.devtools.menu.run" label="Run GAMA">
