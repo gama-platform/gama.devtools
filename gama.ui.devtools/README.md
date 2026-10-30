@@ -47,7 +47,8 @@ local installation, use a uniquely named ZIP for each build rather than a cached
 
 ## Commands
 
-The **GAMA toolbar** provides blue icons for cleaning all GAMA plugins, running the UI,
+The **GAMA toolbar** starts with the GAMA logo, which opens the same commands as the main GAMA menu.
+It then provides blue icons for cleaning all GAMA plugins, running the UI,
 debugging the UI, exporting a local release, and searching for a GAML keyword.
 Run and Debug use the same GUI launch configuration as the menu commands. When no configuration
 is associated yet, they open **Configure GAMA Launches** before launching; canceling does not launch.
