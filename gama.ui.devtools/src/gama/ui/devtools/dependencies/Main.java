@@ -3,7 +3,7 @@ package gama.ui.devtools.dependencies;
 import java.nio.file.Path;
 import java.util.Set;
 
-
+/** Command-line entry point for generating the standalone dependency graph reports. */
 public class Main {
 
     public static void main(String argv[])

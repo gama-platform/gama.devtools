@@ -39,7 +39,13 @@ import org.xml.sax.InputSource;
 import gama.ui.devtools.GamaDevToolsActivator;
 import gama.ui.devtools.install.InstallModel.Project;
 
-/** Eclipse adapters for import, additive working sets and bundled preference profiles. */
+/**
+ * Eclipse adapters for project import, additive working sets and bundled preference profiles.
+ *
+ * <p>Some explorer and preference operations use JDT internal APIs because Eclipse does not expose
+ * equivalent public APIs; these integrations may need adjustment when the supported Eclipse platform
+ * changes.
+ */
 @SuppressWarnings("restriction")
 public final class WorkspaceSetup {
 

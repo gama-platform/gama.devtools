@@ -25,6 +25,14 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.net.URI;
 
+/**
+ * Builds static library dependency graphs and potential service-provider relationships using the JDK's
+ * {@code jdeps} analyzer.
+ *
+ * <p>Callers provide the library archives, generate the dependency graph, and then query or export the
+ * results. Service relationships are inferred from service descriptors and bytecode references; they
+ * describe potential rather than confirmed runtime usage.
+ */
 public class DependencyGraphBuilder {
 
     private static final String servicePathStr = "META-INF/services/";
@@ -237,7 +245,7 @@ public class DependencyGraphBuilder {
      * Manually set the target libraries to be analyzed
      * 
      * @param libraries
-     *                Set<Path> of libraries
+     *                the libraries to analyze
      */
     public void setLibraries(Set<Path> libraries) {
         this.libraries = new LinkedHashSet<Path>(libraries);
@@ -263,7 +271,7 @@ public class DependencyGraphBuilder {
      * Manually add a libraries to be analyzed
      * 
      * @param libraries
-     *                Set<Path> of libraries to add
+     *                the libraries to add
      * 
      * @return true if library was not already present else false
      */
@@ -351,7 +359,7 @@ public class DependencyGraphBuilder {
 
     /**
      * Get the Set of libraries
-     * @return Set<Path>
+     * @return an unmodifiable view of the library paths
     */
     public Set<Path> getLibraries() {
         return Collections.unmodifiableSet(libraries);
@@ -387,12 +395,23 @@ public class DependencyGraphBuilder {
         return getDependenciesGraph().reachableFrom(name);
     }
 
-
+    /**
+     * Returns the libraries directly imported by the named library.
+     *
+     * @param library the library name
+     * @return a mutable set of direct dependency names
+     */
     public Set<String> getDirectDependencies(String library)
     {
         return new LinkedHashSet<>(getDependenciesGraph().successorsOf(library));
     }
 
+    /**
+     * Returns the libraries that directly import the named library.
+     *
+     * @param library the library name
+     * @return a mutable set of direct importer names
+     */
     public Set<String> getDirectImporters(String library)
     {
         return new LinkedHashSet<>(getImportsGraph().successorsOf(library));
@@ -560,7 +579,7 @@ public class DependencyGraphBuilder {
      * @param library
      *              name of the target library 
      * 
-     * @return Set<String> of providers of library
+     * @return the library names providing services consumed by the target
      */
     public Set<String> getLibraryProviders(String library)
     {
@@ -580,7 +599,7 @@ public class DependencyGraphBuilder {
      * @param library
      *              name of the target library 
      * 
-     * @return Set<String> of direct consumers of library
+     * @return the library names that potentially consume services from the target
      */
     public Set<String> getLibraryConsumers(String library)
     {
@@ -600,7 +619,7 @@ public class DependencyGraphBuilder {
      * @param library
      *              name of the target library 
      * 
-     * @return Set<String> of direct providers of library
+     * @return the library names directly providing services consumed by the target
      */
     public Set<String> getLibraryDirectProviders(String library)
     {
@@ -620,7 +639,7 @@ public class DependencyGraphBuilder {
      * @param library
      *              name of the target library 
      * 
-     * @return Set<String> of direct consumers of library
+     * @return the library names that directly consume services from the target
      */
     public Set<String> getLibraryDirectConsumers(String library)
     {
@@ -641,7 +660,7 @@ public class DependencyGraphBuilder {
      * @param library
      *              name of the target library 
      * 
-     * @return Set<String> of services of the target library
+     * @return the service names declared by the target library
      */
     public Set<String> getLibraryServices(String library)
     {

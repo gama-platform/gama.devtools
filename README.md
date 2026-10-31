@@ -12,10 +12,9 @@ Update site: `https://gama-platform.org/gama.devtools/` (in Eclipse, *Help > Ins
 | `gama.feature.devtools` | The feature installed from the update site. |
 | `gama.p2site.devtools` | The update site, published by `.github/workflows/publish-devtools.yaml`. |
 
-Build with `mvn -DskipTests package` (JDK 21+, Maven 3.9). Tests:
+Build with `mvn -DskipTests package` (JDK 21+, Maven 3.9). Run the publishing tests with:
 
 ```
-java gama.ui.devtools/tests/DevToolsMenuTest.java .
 python3 -m unittest discover -s gama.p2site.devtools -p 'test_publish.py'
 ```
 

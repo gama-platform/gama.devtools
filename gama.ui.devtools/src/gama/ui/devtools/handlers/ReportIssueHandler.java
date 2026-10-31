@@ -11,6 +11,7 @@ import org.eclipse.ui.statushandlers.StatusManager;
 
 import gama.ui.devtools.util.ResourceUtils;
 
+/** Opens the repository's new-issue page in the user's external browser. */
 public final class ReportIssueHandler extends AbstractHandler {
 
 	private static final URI NEW_ISSUE = URI.create("https://github.com/gama-platform/gama.devtools/issues/new");

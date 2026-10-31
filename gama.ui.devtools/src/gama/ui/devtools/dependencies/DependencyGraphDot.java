@@ -84,6 +84,7 @@ final class DependencyGraphDot {
             }
             expect("");
             DependencyGraph graph = new DependencyGraph();
+            // Resolve edges after parsing all nodes so labels declared after their edges are honored.
             for (String label : labels.values()) {
                 if (!graph.addVertex(label)) throw error("Different node IDs have the same label: " + label);
             }

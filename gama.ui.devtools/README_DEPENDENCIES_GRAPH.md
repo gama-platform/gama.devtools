@@ -120,19 +120,3 @@ to update inputs and invalidate cached results. Relationship query results from 
 independent mutable sets, as required by the HTML renderer. Unknown library queries throw
 `IllegalArgumentException`. Import/export and library discovery retain their boolean success return
 values, but throw on failure.
-
-## Regression checks
-
-Run from the repository root with a full JDK:
-
-```sh
-mkdir -p gama.ui.devtools/target/dependency-graph-tests
-javac --release 21 -d gama.ui.devtools/target/dependency-graph-tests \
-  gama.ui.devtools/src/gama/ui/devtools/dependencies/*.java \
-  gama.ui.devtools/tests/DependencyGraphTest.java
-java -cp gama.ui.devtools/target/dependency-graph-tests DependencyGraphTest .
-```
-
-The checks cover cycles, self-loops, repeated edges, reverse and transitive queries, DOT round trips
-and the legacy snapshot, rejected DOT syntax, HTML rendering, service relationships and real `jdeps`
-analysis of temporary compiled JARs.

@@ -211,16 +211,6 @@ Explorer layout changes and JDT profile import are isolated in `install/Workspac
 not expose public APIs for all of these operations, so that adapter uses JDT's internal profile/Package
 Explorer APIs and must be checked when updating the supported Eclipse platform.
 
-The project discovery/project-set regression test runs without Eclipse, from the root of this repository,
-given a checkout of `gama-platform/gama`:
-```
-javac -d /tmp/gama-install-tests gama.ui.devtools/src/gama/ui/devtools/install/InstallModel.java gama.ui.devtools/tests/InstallModelTest.java
-java -cp /tmp/gama-install-tests InstallModelTest /path/to/gama .
-```
-`tests/RepositoryCheckoutTest.java` additionally exercises cloning, fast-forward updates, branch selection,
-cancellation and refusal to overwrite local edits/commits, using only disposable local repositories. Compile
-and run it with JGit and Eclipse Core Runtime (and their dependencies) on the classpath.
-
 ## Running and debugging workspace GAMA
 
 The run and debug commands in **GAMA > Run GAMA** share three launch configurations. **GUI** opens GAMA,
@@ -259,12 +249,6 @@ once to create and select a corrected configuration, or add `-data @noDefault` t
 These launch commands require the Eclipse Debug, Java launching and PDE launching bundles, installed as
 devtools dependencies. They use public Eclipse APIs rather than version-specific PDE implementation classes.
 
-The product-settings regression test runs without Eclipse, given a checkout of `gama-platform/gama`:
-```
-javac -d /tmp/gama-launch-tests gama.ui.devtools/src/gama/ui/devtools/launch/ProductLaunchSpec.java gama.ui.devtools/tests/ProductLaunchSpecTest.java
-java -cp /tmp/gama-launch-tests ProductLaunchSpecTest /path/to/gama
-```
-
 ## Updating Java headers
 
 **GAMA > Update file headers** asks for a GAMA version and copyright end year. By default it processes all open GAMA plugins; the scope can be restricted to the selected GAMA projects. The next page previews the changes and lets you exclude individual files before applying them.
@@ -272,12 +256,6 @@ java -cp /tmp/gama-launch-tests ProductLaunchSpecTest /path/to/gama
 Every Java compilation unit in the projects' Java source folders is considered, including `package-info.java` and files created without a GAMA wizard. Missing GAMA headers are added, and existing ones have their filename, plugin name, version and GAMA copyright year updated. Existing copyright holders, author annotations and other license notices are preserved; a new GAMA header is prepended rather than replacing an unrelated notice. Files outside Java source folders (such as vendored files under `libs/`), generated `gaml/` sources, and derived resources are excluded.
 
 Line endings, encoding and the rest of the file are preserved. Changes use Eclipse's refactoring preview and undo support, including its handling of open editor buffers and save state. The command is independent of Clean & Rebuild and never runs automatically. After applying it, the version and year are remembered and used by the Java wizards as well. This command does not change files in closed or non-GAMA projects.
-
-The text transformer has a standalone regression test that needs only a JDK:
-```
-javac -d /tmp/gama-header-tests gama.ui.devtools/src/gama/ui/devtools/util/JavaHeaderText.java gama.ui.devtools/tests/JavaHeaderTextTest.java
-java -cp /tmp/gama-header-tests JavaHeaderTextTest
-```
 
 ## Finding the Java implementation of a GAML keyword
 
