@@ -57,8 +57,9 @@ The icons include high-resolution variants for HiDPI displays.
 The **GAMA** menu contains, without headings or icons: the **Run GAMA** submenu
 (Configure..., followed by a separator, Run UI / Run headless / Run tests, a separator,
 Debug UI / Debug headless, then a separator and Build local release...);
-**Clean GAMA plugins**; **Repair GAMA plugins**; a separator; **Search GAML keyword...**
-directly in the menu and the **Report** submenu (Native library dependencies / Missing annotations);
+**Clean GAMA plugins**; **Repair GAMA plugins**; a separator; **Check workspace...** and
+**Search GAML keyword...** directly in the menu and the **Report** submenu
+(Native library dependencies / Missing annotations);
 a separator; **Create GAMA artefacts**; a separator; **Report an issue...**;
 then **Install GAMA sources** and **Update GAMA tools...**.
 The **Create GAMA artefacts** submenu lists all six creation wizards. They are also available in
@@ -66,6 +67,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 
 | Command | What it does |
 |---|---|
+| **Check workspace...** | Checks open GAMA plugin configuration, workspace projects and target-platform bundles required by the GUI product, and whether Eclipse has a compatible JDK 25. Offers to repair fixable plugin settings or open the core source installer; it does not change anything without confirmation. |
 | **Search GAML keyword...** (`Ctrl/Cmd+Shift+Alt+K`) | Finds the Java code behind a GAML keyword (see below). |
 | **Run GAMA > Run UI / Run headless / Run tests / Debug UI / Debug headless** | Launches workspace GAMA through editable PDE Eclipse Application configurations. |
 | **Run GAMA > Configure...** | Associates each flavor with an existing configuration or generates a default; provides editing and confirmed restoration of defaults. |

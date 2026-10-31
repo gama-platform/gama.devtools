@@ -47,6 +47,8 @@
       <command id="gama.ui.devtools.dependencyGraph" categoryId="gama.ui.devtools.category"
             name="Native library dependencies"
             description="Computes the graph of dependencies between the packages of GAMA (requires jdeps)"/>
+      <command id="gama.ui.devtools.workspaceDoctor" categoryId="gama.ui.devtools.category"
+            name="Check workspace..." description="Checks GAMA plugin configuration, launch prerequisites and JDK setup"/>
       <command id="gama.ui.devtools.openNewWizard" categoryId="gama.ui.devtools.category" name="Open a GAMA Wizard">
          <commandParameter id="gama.ui.devtools.wizardId" name="Wizard id" optional="false"/>
       </command>
@@ -81,6 +83,7 @@
       <handler commandId="gama.ui.devtools.rebuildProcessorJar" class="gama.ui.devtools.handlers.RebuildProcessorJarHandler"/>
       <handler commandId="gama.ui.devtools.regenerateGrammar" class="gama.ui.devtools.handlers.RegenerateGrammarHandler"/>
       <handler commandId="gama.ui.devtools.dependencyGraph" class="gama.ui.devtools.handlers.DependencyGraphHandler"/>
+      <handler commandId="gama.ui.devtools.workspaceDoctor" class="gama.ui.devtools.handlers.WorkspaceDoctorHandler"/>
       <handler commandId="gama.ui.devtools.openNewWizard" class="gama.ui.devtools.handlers.OpenNewWizardHandler"/>
       <handler commandId="gama.ui.devtools.updateTools" class="gama.ui.devtools.handlers.UpdateToolsHandler"/>
       <handler commandId="gama.ui.devtools.reportIssue" class="gama.ui.devtools.handlers.ReportIssueHandler"/>
@@ -182,6 +185,7 @@
                <command commandId="gama.ui.devtools.generateTestStubs" style="push"/>
             </menu>
             <separator name="reports" visible="true"/>
+            <command commandId="gama.ui.devtools.workspaceDoctor" style="push"/>
             <command commandId="gama.ui.devtools.findKeyword" style="push"/>
             <menu id="gama.ui.devtools.menu.report" label="Report">
                <command commandId="gama.ui.devtools.dependencyGraph" style="push"/>
