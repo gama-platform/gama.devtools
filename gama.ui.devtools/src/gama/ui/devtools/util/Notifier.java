@@ -11,6 +11,8 @@
 package gama.ui.devtools.util;
 
 import org.eclipse.jface.notifications.NotificationPopup;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 
@@ -26,9 +28,18 @@ public final class Notifier {
 	 */
 	public static void show(final String title, final String text) {
 		if (!PlatformUI.isWorkbenchRunning()) return;
-		Display display = PlatformUI.getWorkbench().getDisplay();
-		display.asyncExec(() -> NotificationPopup.forDisplay(display).title(title, true).text(text).delay(8000)
-				.open());
+		var workbench = PlatformUI.getWorkbench();
+		Display display = workbench.getDisplay();
+		if (display.isDisposed() || workbench.isClosing()) return;
+		try {
+			display.asyncExec(() -> {
+				if (display.isDisposed() || workbench.isClosing()) return;
+				NotificationPopup.forDisplay(display).title(title, true).text(text).delay(8000).open();
+			});
+		} catch (SWTException e) {
+			if (e.code != SWT.ERROR_DEVICE_DISPOSED) throw e;
+			ResourceUtils.log(e);
+		}
 	}
 
 }

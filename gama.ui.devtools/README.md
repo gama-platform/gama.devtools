@@ -54,6 +54,34 @@ Run and Debug use the same GUI launch configuration as the menu commands. When n
 is associated yet, they open **Configure GAMA Launches** before launching; canceling does not launch.
 The icons include high-resolution variants for HiDPI displays.
 
+When a GAMA UI Eclipse Application process terminates with exit status **42**, a dialog proposes
+**Clean and Relaunch**, **Clean Only** or **Ignore**, once per launch. This status is reserved by
+`gama.api.additions.GamaBundleLoader.EXIT_GAML_INITIALIZATION_FAILED` in
+[gama-platform/gama](https://github.com/gama-platform/gama)
+for fatal mandatory GAML API/core initialization failures. The value is mirrored here as a
+cross-repository contract; the developer tools build does not depend on any GAMA runtime bundle.
+Optional plugin failures, normal termination and other exit statuses do not trigger recovery.
+GAMA also uses 42 for mandatory-additions failures in headless mode; those launches are deliberately
+not monitored here.
+There is no console fallback: older GAMA versions without this exit contract are not detected.
+
+Detection covers PDE Eclipse Application launches using product `gama.ui.application.product` or
+the direct applications `gama.export.DocumentApplication` (the current UI router) and
+`gama.ui.application.GamaApplication`. It includes mapped/custom configurations using these identities
+and Eclipse's own Run/Debug actions, not only the GAMA menu/toolbar. Explicit `-application` and
+`-product` program arguments are considered, with an explicit application taking precedence over a
+product as in Eclipse; configuration names and mappings alone are not evidence
+of a GAMA UI launch. Headless/test launches and unrelated Eclipse applications are excluded.
+Custom product IDs and launch types outside this coverage, and configurations relying solely on an
+implicit target-platform application default, are not detected.
+
+Recovery prompts to save modified editors, waits up to 10 seconds for any remaining part of the failed launch to stop,
+then runs the existing **Clean GAMA plugins** workspace clean/rebuild. **Clean and Relaunch** starts
+the same configuration in the original mode (run or debug) only after a successful rebuild regenerated
+every `GamlAdditions` and left no build errors. Save/build cancellation, termination/build errors,
+a removed configuration or workbench shutdown prevent relaunch. Errors are reported; no UI is
+scheduled after the workbench closes.
+
 The **GAMA** menu contains, without headings or icons: the **Run GAMA** submenu
 (Configure..., followed by a separator, Run UI / Run headless / Run tests, a separator,
 Debug UI / Debug headless, then a separator and Build local release...);

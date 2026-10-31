@@ -57,6 +57,7 @@
    <!-- Handlers -->
    <extension point="org.eclipse.ui.startup">
       <startup class="gama.ui.devtools.install.UpdateCheckStartup"/>
+      <startup class="gama.ui.devtools.launch.GamaStartupMonitor"/>
    </extension>
    <extension point="org.eclipse.ui.handlers">
       <handler commandId="gama.ui.devtools.launchGama" class="gama.ui.devtools.handlers.LaunchGamaHandler"/>

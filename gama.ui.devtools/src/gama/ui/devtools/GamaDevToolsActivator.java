@@ -14,6 +14,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 import gama.ui.devtools.install.UpdateCheckStartup;
+import gama.ui.devtools.launch.GamaStartupMonitor;
 /**
  * The activator for the GAMA Developer Tools plugin. This class controls the plug-in life cycle and provides
  * shared access to plugin-level resources such as the preference store and image registry.
@@ -75,6 +76,7 @@ public class GamaDevToolsActivator extends AbstractUIPlugin {
 	@Override
 	public void stop(final BundleContext context) throws Exception {
 		UpdateCheckStartup.stop();
+		GamaStartupMonitor.uninstall();
 		instance = null;
 		super.stop(context);
 	}

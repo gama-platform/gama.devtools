@@ -28,7 +28,6 @@ import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jdt.apt.core.util.AptConfig;
-import org.eclipse.jdt.core.IJavaModelMarker;
 
 import gama.ui.devtools.config.ConfigurationIssue;
 import gama.ui.devtools.config.PluginConfigurationChecker;
@@ -54,6 +53,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 
 	private final List<IProject> targets;
 	private final boolean wholeWorkspace;
+	private volatile boolean succeeded;
 
 	/**
 	 * @param targets
@@ -69,8 +69,14 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 		setUser(true);
 	}
 
+	/** Whether the last run regenerated every GamlAdditions and left no build error. */
+	public boolean succeeded() {
+		return succeeded;
+	}
+
 	@Override
 	public IStatus runInWorkspace(final IProgressMonitor monitor) throws CoreException {
+		succeeded = false;
 		long start = System.currentTimeMillis();
 		SubMonitor sub = SubMonitor.convert(monitor, getName(), 100);
 		try {
@@ -109,9 +115,11 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 			for (IProject p : targets) {
 				if (!p.getFile(GamaProjects.generatedAdditionsPath(p)).exists()) { missing.add(p.getName()); }
 			}
-			int errors = countErrors(configs);
 			PluginConfigurationChecker.updateMarkers(targets, true,
 					PluginConfigurationChecker.check(targets, sub.split(10)));
+			int errors = countErrors(configs);
+			if (sub.isCanceled()) return Status.CANCEL_STATUS;
+			succeeded = !targets.isEmpty() && missing.isEmpty() && errors == 0;
 			report(missing, errors, (System.currentTimeMillis() - start) / 1000);
 			return Status.OK_STATUS;
 		} catch (OperationCanceledException e) {
@@ -134,7 +142,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 	private static int countErrors(final IBuildConfiguration[] configs) throws CoreException {
 		int errors = 0;
 		for (IBuildConfiguration c : configs) {
-			for (IMarker m : c.getProject().findMarkers(IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER, true,
+			for (IMarker m : c.getProject().findMarkers(IMarker.PROBLEM, true,
 					IResource.DEPTH_INFINITE)) {
 				if (m.getAttribute(IMarker.SEVERITY, -1) == IMarker.SEVERITY_ERROR) { errors++; }
 			}
@@ -151,8 +159,9 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 			sb.append("\nGAML additions missing for: ").append(String.join(", ", missing))
 					.append(". Use 'Check GAMA Plugins Configuration'.");
 		}
-		if (errors > 0) { sb.append("\n").append(errors).append(" Java compilation error(s) remain."); }
-		Notifier.show(missing.isEmpty() && errors == 0 ? "GAMA build succeeded" : "GAMA build finished with problems",
+		if (targets.isEmpty()) { sb.append("\nNo open GAMA plugins were found."); }
+		if (errors > 0) { sb.append("\n").append(errors).append(" build error(s) remain."); }
+		Notifier.show(succeeded ? "GAMA build succeeded" : "GAMA build finished with problems",
 				sb.toString());
 	}
 

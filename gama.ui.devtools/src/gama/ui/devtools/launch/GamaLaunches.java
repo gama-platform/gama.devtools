@@ -117,6 +117,33 @@ public final class GamaLaunches {
 				IPDELauncherConstants.ECLIPSE_APPLICATION_LAUNCH_CONFIGURATION_TYPE)));
 	}
 
+	/** Uses the launched identity, not a configuration's name, generated tag, or user mapping. */
+	public static boolean isGui(final ILaunchConfiguration config) throws CoreException {
+		if (config == null || !IPDELauncherConstants.ECLIPSE_APPLICATION_LAUNCH_CONFIGURATION_TYPE
+				.equals(config.getType().getIdentifier())) return false;
+		String product = config.getAttribute(IPDELauncherConstants.USE_PRODUCT, false)
+				? config.getAttribute(IPDELauncherConstants.PRODUCT, "") : "";
+		String application = product.isEmpty() ? config.getAttribute(IPDELauncherConstants.APPLICATION, "") : null;
+		String[] args = DebugPlugin.parseArguments(
+				config.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROGRAM_ARGUMENTS, ""));
+		for (int i = 0; i < args.length; i++) {
+			if ("-vmargs".equals(args[i])) break;
+			if ("-application".equals(args[i]) || "-product".equals(args[i])) {
+				String option = args[i];
+				if (++i == args.length || args[i].startsWith("-")) return false;
+				if ("-application".equals(option)) application = args[i];
+				else product = args[i];
+			}
+		}
+		if (application != null) return isGuiApplication(application);
+		return "gama.ui.application.product".equals(product);
+	}
+
+	private static boolean isGuiApplication(final String application) {
+		return "gama.ui.application.GamaApplication".equals(application)
+				|| "gama.export.DocumentApplication".equals(application);
+	}
+
 	public static ILaunchConfiguration mapped(final Flavor flavor) throws CoreException {
 		String memento = GamaDevToolsActivator.getInstance().getPreferenceStore().getString("launch." + flavor.name());
 		if (!memento.isEmpty()) {
