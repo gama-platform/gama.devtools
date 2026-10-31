@@ -52,7 +52,9 @@ It then provides blue icons for cleaning all GAMA plugins, running the UI,
 debugging the UI, exporting a local release, and searching for a GAML keyword.
 Run and Debug use the same GUI launch configuration as the menu commands. When no configuration
 is associated yet, they open **Configure GAMA Launches** before launching; canceling does not launch.
-The icons include high-resolution variants for HiDPI displays.
+Every GAMA Developer Tools launch command refreshes the whole workspace recursively from disk before
+starting the configured UI, headless or test launch. The refresh runs as a cancellable background job;
+canceling it prevents the launch. The icons include high-resolution variants for HiDPI displays.
 
 When a GAMA UI Eclipse Application process terminates with exit status **42**, a dialog proposes
 **Clean and Relaunch**, **Clean Only** or **Ignore**, once per launch. This status is reserved by
@@ -97,7 +99,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 |---|---|
 | **Check workspace...** | Checks open GAMA plugin configuration, workspace projects and target-platform bundles required by the GUI product, and whether Eclipse has a compatible JDK 25. Offers to repair fixable plugin settings or open the core source installer; it does not change anything without confirmation. |
 | **Search GAML keyword...** (`Ctrl/Cmd+Shift+Alt+K`) | Finds the Java code behind a GAML keyword (see below). |
-| **Run GAMA > Run UI / Run headless / Run tests / Debug UI / Debug headless** | Launches workspace GAMA through editable PDE Eclipse Application configurations. |
+| **Run GAMA > Run UI / Run headless / Run tests / Debug UI / Debug headless** | Refreshes the workspace recursively, then launches workspace GAMA through editable PDE Eclipse Application configurations. |
 | **Run GAMA > Configure...** | Associates each flavor with an existing configuration or generates a default; provides editing and confirmed restoration of defaults. |
 | **Clean GAMA plugins** (`Cmd+B` on macOS, `Ctrl+B` on Windows/Linux) | Saves the editors, refreshes the whole workspace recursively from disk and automatically repairs the plugins configuration (see *Configuration checks*). Disables the annotation processor, deletes the `gaml/` folders and re-enables the processor. These steps only affect the GAMA plugins. Then runs a clean build and a full build of the whole workspace, and checks that every `GamlAdditions.java` was regenerated. The configuration is checked again afterwards: remaining problems appear in the Problems view, with quick fixes (`Ctrl/Cmd+1`). No dialog is shown and the job can be cancelled. |
 | **Clean...** (context menu) | The same, limited to the GAMA plugins in the selection: only they are reset, cleaned and rebuilt. The initial refresh still covers the whole workspace. |

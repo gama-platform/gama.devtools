@@ -12,7 +12,13 @@ package gama.ui.devtools.handlers;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.debug.ui.DebugUITools;
@@ -21,6 +27,8 @@ import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import gama.ui.devtools.launch.GamaLaunchDialog;
@@ -73,12 +81,47 @@ public final class LaunchGamaHandler extends AbstractHandler {
 			}
 			String mode = "debug".equals(event.getParameter("gama.ui.devtools.launchMode"))
 					? ILaunchManager.DEBUG_MODE : ILaunchManager.RUN_MODE;
-			GamaStartupMonitor.install();
-			DebugUITools.launch(config, mode);
+			launchAfterWorkspaceRefresh(shell, config, mode);
 		} catch (CoreException e) {
 			ResourceUtils.log(e);
 			MessageDialog.openError(shell, "Cannot launch GAMA", e.getStatus().getMessage());
 		}
 		return null;
+	}
+
+	private static void launchAfterWorkspaceRefresh(final Shell shell, final ILaunchConfiguration config,
+			final String mode) {
+		var root = ResourcesPlugin.getWorkspace().getRoot();
+		Job refresh = Job.create("Refresh workspace before launching GAMA", monitor -> {
+			try {
+				root.refreshLocal(IResource.DEPTH_INFINITE, monitor);
+				return Status.OK_STATUS;
+			} catch (CoreException e) {
+				return e.getStatus();
+			}
+		});
+		refresh.setRule(root);
+		refresh.setUser(true);
+		refresh.addJobChangeListener(new JobChangeAdapter() {
+			@Override
+			public void done(final org.eclipse.core.runtime.jobs.IJobChangeEvent event) {
+				IStatus status = event.getResult();
+				if (status.matches(IStatus.CANCEL)) return;
+				Display display = shell.getDisplay();
+				if (display.isDisposed()) return;
+				display.asyncExec(() -> {
+					if (shell.isDisposed()) return;
+					if (!status.isOK()) {
+						CoreException error = new CoreException(status);
+						ResourceUtils.log(error);
+						MessageDialog.openError(shell, "Cannot launch GAMA", status.getMessage());
+						return;
+					}
+					GamaStartupMonitor.install();
+					DebugUITools.launch(config, mode);
+				});
+			}
+		});
+		refresh.schedule();
 	}
 }
