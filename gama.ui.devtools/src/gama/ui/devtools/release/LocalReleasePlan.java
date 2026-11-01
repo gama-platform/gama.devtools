@@ -22,7 +22,11 @@ import org.w3c.dom.Element;
 import gama.ui.devtools.install.InstallModel;
 
 /** GAMA's three-stage build and native-only Tycho configuration, independent of Eclipse. */
-public record LocalReleasePlan(Path source, Path jdk, Path destination, Target target) {
+public record LocalReleasePlan(Path source, Path jdk, Path destination, Target target, boolean replaceExisting) {
+
+	public LocalReleasePlan(Path source, Path jdk, Path destination, Target target) {
+		this(source, jdk, destination, target, false);
+	}
 
 	public Path releasePath() { return destination.resolve(target.mac() ? "Gama.app" : "Gama"); }
 
@@ -56,7 +60,7 @@ public record LocalReleasePlan(Path source, Path jdk, Path destination, Target t
 		if (destination.toRealPath().startsWith(source.toRealPath())) {
 			throw new IOException("Save the release outside the GAMA source checkout.");
 		}
-		if (Files.exists(releasePath(), LinkOption.NOFOLLOW_LINKS)) {
+		if (!replaceExisting && Files.exists(releasePath(), LinkOption.NOFOLLOW_LINKS)) {
 			throw new IOException("A release already exists at " + releasePath()
 					+ ". Move it away or choose another destination.");
 		}

@@ -1,11 +1,15 @@
 package gama.ui.devtools.release;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Shell;
@@ -38,12 +42,24 @@ public final class LocalReleaseDialog {
 			Path jdk = selectJdk();
 			DirectoryDialog destination = new DirectoryDialog(shell);
 			destination.setText("Save local GAMA release");
-			destination.setMessage("Build a local release of GAMA.\n"
-					+ "To integrate a custom plugin, use the navigator context menu \"GAMA > Add to GAMA Build...\".");
+			destination.setMessage("Build a local release of GAMA. To integrate a custom plugin, use the navigator context menu \"GAMA > Add to GAMA Build...\".");
 			destination.setFilterPath(DevToolsPreferences.get("release.destination"));
 			String selected = destination.open();
 			if (selected == null) return Window.CANCEL;
-			LocalReleasePlan plan = new LocalReleasePlan(checkout, jdk, Path.of(selected).toRealPath(), target);
+			Path directory = Path.of(selected).toRealPath();
+			Path release = directory.resolve(target.mac() ? "Gama.app" : "Gama");
+			boolean replaceExisting = Files.exists(release, LinkOption.NOFOLLOW_LINKS);
+			if (replaceExisting && DevToolsPreferences.is(DevToolsPreferences.CONFIRM_RELEASE_REPLACEMENT)) {
+				MessageDialogWithToggle confirm = MessageDialogWithToggle.openYesNoQuestion(shell,
+						"Replace existing GAMA release",
+						"A GAMA release already exists at " + release + ". Replace it with the new release?",
+						"Do not ask again", false, null, null);
+				if (confirm.getToggleState()) {
+					DevToolsPreferences.store().setValue(DevToolsPreferences.CONFIRM_RELEASE_REPLACEMENT, false);
+				}
+				if (confirm.getReturnCode() != IDialogConstants.YES_ID) return Window.CANCEL;
+			}
+			LocalReleasePlan plan = new LocalReleasePlan(checkout, jdk, directory, target, replaceExisting);
 			plan.validate();
 			DevToolsPreferences.store().setValue("release.destination", plan.destination().toString());
 			result = plan;

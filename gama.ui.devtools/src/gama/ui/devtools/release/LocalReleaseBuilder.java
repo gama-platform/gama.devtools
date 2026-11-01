@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -163,11 +164,36 @@ public final class LocalReleaseBuilder {
 			Files.copy(log, staging.resolve(plan.target().mac() ? "Gama.app/Contents/build.log" : "build.log"));
 			checkCanceled(canceled);
 			Path destination = plan.releasePath();
+			Path backup = null;
 			if (Files.exists(destination, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
-				throw new IOException("A release already exists at " + destination
-						+ ". Move it away or choose another destination.");
+				if (!plan.replaceExisting()) {
+					throw new IOException("A release already exists at " + destination
+							+ ". Choose another destination or confirm that it can be replaced.");
+				}
+				backup = destination.resolveSibling("." + destination.getFileName() + ".backup-" + UUID.randomUUID());
+				Files.move(destination, backup);
 			}
-			Files.move(plan.target().mac() ? staging.resolve("Gama.app") : staging, destination);
+			try {
+				Files.move(plan.target().mac() ? staging.resolve("Gama.app") : staging, destination);
+			} catch (IOException | RuntimeException e) {
+				if (backup != null && !Files.exists(destination, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+					try {
+						Files.move(backup, destination);
+					} catch (IOException restoreFailure) {
+						e.addSuppressed(new IOException("The previous release could not be restored from " + backup,
+								restoreFailure));
+					}
+				}
+				throw e;
+			}
+			if (backup != null) {
+				try {
+					deleteTree(backup);
+				} catch (IOException e) {
+					throw new IOException("The new release was saved, but the replaced release could not be erased at "
+							+ backup, e);
+				}
+			}
 			return destination;
 		} catch (IOException | RuntimeException | Error e) {
 			failure = e;

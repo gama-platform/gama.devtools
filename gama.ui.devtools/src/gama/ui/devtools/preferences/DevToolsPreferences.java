@@ -29,12 +29,16 @@ public class DevToolsPreferences extends AbstractPreferenceInitializer {
 	/** Whether to offer the Get started wizard when the workspace has no GAMA sources (stored per workspace). */
 	public static final String GETTING_STARTED_PROMPT = "gama.devtools.gettingStartedPrompt";
 
+	/** Whether to confirm before replacing an existing local GAMA release. */
+	public static final String CONFIRM_RELEASE_REPLACEMENT = "gama.devtools.confirmReleaseReplacement";
+
 	@Override
 	public void initializeDefaultPreferences() {
 		IPreferenceStore store = store();
 		store.setDefault(DEFAULT_VENDOR, "UMMISCO");
 		store.setDefault(DEFAULT_PREFIX, "gama.extension.");
 		store.setDefault(GETTING_STARTED_PROMPT, true);
+		store.setDefault(CONFIRM_RELEASE_REPLACEMENT, true);
 	}
 
 	/** The preference store of the plugin. */
