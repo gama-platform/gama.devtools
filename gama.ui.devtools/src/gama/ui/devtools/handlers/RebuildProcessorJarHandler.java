@@ -92,7 +92,7 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 			} else if (status.isOK()) {
 				ProcessorReuse.record(source, inputs);
 				Notifier.show("GAMA annotation processor", GamaProjects.PROCESSOR_JAR
-						+ " regenerated. Run 'GAMA > Clean all...' to use it in all the plugins.");
+						+ " regenerated. Run 'GAMA > Clean GAMA plugins' to use it in all the plugins.");
 			} else {
 				ErrorDialog.openError(shell, "GAMA", "The processor export reported problems; release reuse is disabled.", status);
 			}

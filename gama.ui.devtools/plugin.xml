@@ -95,7 +95,7 @@
       <handler commandId="gama.ui.devtools.install" class="gama.ui.devtools.handlers.InstallSourcesHandler"/>
    </extension>
 
-   <!-- Key bindings: Clean and Rebuild (all), Find GAML Keyword Implementation -->
+   <!-- Key bindings: Clean GAMA plugins, Search GAML keyword -->
    <extension point="org.eclipse.ui.bindings">
       <!-- Delete the generic Build All binding without deleting our matching platform-specific bindings. -->
       <key schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"

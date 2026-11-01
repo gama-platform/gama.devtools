@@ -59,7 +59,7 @@ public class GamlKeywordDialog extends FilteredItemsSelectionDialog {
 	 */
 	public GamlKeywordDialog(final Shell shell) {
 		super(shell, true);
-		setTitle("Find GAML Keyword Implementation");
+		setTitle("Search GAML keyword");
 		setMessage("Enter a GAML keyword (prefix with 'kind:' to restrict, e.g. 'facet:speed', 'op:+'; * and ? are "
 				+ "wildcards):");
 		KeywordLabelProvider labels = new KeywordLabelProvider();

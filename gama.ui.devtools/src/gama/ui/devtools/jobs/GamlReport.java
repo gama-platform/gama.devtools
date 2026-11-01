@@ -72,7 +72,7 @@ public final class GamlReport {
 		sb.append("Generated on ").append(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
 				.append(" from the warnings of the GAML annotation processor on ").append(projects.size())
 				.append(" plugin(s).\n\n");
-		sb.append("> If this report is empty or incomplete, run **GAMA > Clean all...** first: the ")
+		sb.append("> If this report is empty or incomplete, run **GAMA > Clean GAMA plugins** first: the ")
 				.append("warnings are only produced when the annotation processor runs.\n\n");
 		sb.append("| Plugin | Undocumented | Untested operators | Other |\n|---|---:|---:|---:|\n");
 		for (IProject p : projects) {
@@ -88,6 +88,8 @@ public final class GamlReport {
 				untested);
 		sb.append("_An operator is considered tested if it has executable examples (`@example(value=..., equals=...)`), ")
 				.append("`@test` / `@tests` annotations, or is explicitly marked `@no_test`._\n\n");
+		sb.append("Use **GAMA > Repair GAMA plugins > Generate missing tests** to generate GAML test stubs ")
+				.append("for the untested operators.\n\n");
 		section(sb, "Other processor messages", others);
 		return sb.toString();
 	}

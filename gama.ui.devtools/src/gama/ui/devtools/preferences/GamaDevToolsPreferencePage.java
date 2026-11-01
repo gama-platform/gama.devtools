@@ -26,7 +26,7 @@ public class GamaDevToolsPreferencePage extends FieldEditorPreferencePage implem
 	/** Constructor. */
 	public GamaDevToolsPreferencePage() {
 		super(GRID);
-		setDescription("Settings of the GAMA developer tools (wizards and 'Clean and Rebuild').");
+		setDescription("Settings of the GAMA developer tools (setup prompt and creation wizards).");
 	}
 
 	@Override

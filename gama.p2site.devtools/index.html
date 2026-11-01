@@ -14,19 +14,37 @@ code { background: #f2f2f2; padding: .1em .3em; border-radius: 3px; }
 <p>The GAMA Developer Tools add a <b>GAMA</b> menu to the Eclipse IDE used to develop
 <a href="https://github.com/gama-platform/gama">GAMA</a>. They provide:</p>
 <ul>
+<li><b>Get started...</b>, a guided setup from prerequisite checks through source installation and building to launching GAMA;</li>
 <li>wizards for new GAMA plugins, skills, operators, actions, types and test models;</li>
-<li>a dialog-free <i>Clean and Rebuild</i> that resets the GAML annotation processor;</li>
+<li><b>Clean GAMA plugins</b>, a dialog-free clean and rebuild that resets the GAML annotation processor;</li>
 <li>a configuration checker with quick fixes;</li>
 <li>reports of undocumented and untested GAML elements.</li>
 </ul>
 <h2>Installation</h2>
-<p>You need an Eclipse IDE with JDT and PDE (e.g. <i>Eclipse IDE for RCP and RAP Developers</i>), running on Java 25.</p>
+<p>For GAMA development, use <i>Eclipse IDE for Java and DSL Developers 2026-03 or newer</i>,
+with JDT, PDE and Xtext/MWE2, running on Java 21 or newer. A separate full JDK 25 is needed
+to compile and launch GAMA; Eclipse can keep using its bundled Java runtime.</p>
 <ol>
 <li>In Eclipse, choose <i>Help &gt; Install New Software...</i></li>
 <li>Click <i>Add...</i> and enter <code>https://gama-platform.org/gama.devtools/</code> as the location.</li>
 <li>Select <i>GAMA Developer Tools</i>, then finish the wizard and restart Eclipse.</li>
 </ol>
-<p>Eclipse then finds new versions through <i>Help &gt; Check for Updates</i>.</p>
+<h2>Getting started</h2>
+<p><b>Recommended:</b> accept the setup prompt after restarting in a workspace without a
+<code>gama.core</code> project, or choose <b>GAMA &gt; Get started...</b>. The wizard checks Eclipse,
+helps register JDK 25, opens the core and optional source installers, cleans and builds on request,
+then offers Run, Debug or launch-configuration creation only.</p>
+<p>It does not download and install Eclipse components or the JDK for you, nor install missing
+target-platform dependencies. Checks link to the relevant downloads and Eclipse settings.
+The startup prompt can be disabled per workspace in <i>Preferences &gt; GAMA Developer Tools</i>.</p>
+<p><b>Manual alternative:</b> configure JDK 25 in <i>Java &gt; Installed JREs</i> and its execution
+environments, install or import the sources, resolve dependencies against the running Eclipse,
+use <b>GAMA &gt; Clean GAMA plugins</b> and <b>Check workspace...</b>, then configure and run the GUI
+through <b>GAMA &gt; Run GAMA</b>. See the
+<a href="https://github.com/gama-platform/gama.devtools/blob/main/gama.ui.devtools/README.md#getting-started">guided and manual setup instructions</a>
+for the complete steps.</p>
+<p>Use <b>GAMA &gt; Update GAMA tools...</b> for developer tools updates, or Eclipse's
+<i>Help &gt; Check for Updates</i>.</p>
 <p>The stable address above is a composite update site. Previous builds are retained at versioned
 addresses so that installations started before an update can still download their artifacts.</p>
 <p>The update site is rebuilt every time the developer tools change on the <code>main</code> branch. See the

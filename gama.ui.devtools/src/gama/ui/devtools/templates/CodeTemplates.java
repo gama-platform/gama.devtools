@@ -279,6 +279,20 @@ public final class CodeTemplates {
 
 				%2$s
 
+				## Development
+
+				Use **GAMA > Get started...** in the Eclipse IDE to check prerequisites, configure a full JDK 25,
+				install the core GAMA sources, build and launch GAMA. It is also offered at startup in a workspace
+				without `gama.core`, unless disabled in **Preferences > GAMA Developer Tools**.
+				Prerequisite downloads and missing target-platform dependencies still need to be installed manually.
+				For guided and manual setup, see the
+				[GAMA development guide](https://github.com/gama-platform/gama/blob/main/DEVELOPING.md).
+
+				To run this plugin, include its feature in the GUI launch configuration. Use **Add to GAMA build...**
+				on the plugin's context menu to integrate it into the Maven, feature and product build when needed.
+				Use **GAMA > Search GAML keyword...** to find existing Java implementations, and
+				**GAMA > Repair GAMA plugins > Generate missing tests** to generate stubs for untested operators.
+
 				## Layout
 
 				- `src/`: the Java sources (skills, operators, types, statements...), annotated with `gama.annotations`.
@@ -287,7 +301,7 @@ public final class CodeTemplates {
 				- `models/`: GAML models shipped with the plugin (tests, recipes, library...).
 
 				The generated additions are available in `gaml/gaml/additions/%3$s/GamlAdditions.java`. If they are not
-				regenerated, use **GAMA > Clean all...** in Eclipse.
+				regenerated, use **GAMA > Clean GAMA plugins** in Eclipse.
 				""".formatted(spec.name(), spec.description(), spec.shortcut());
 	}
 

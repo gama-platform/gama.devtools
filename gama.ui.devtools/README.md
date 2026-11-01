@@ -4,11 +4,17 @@ An Eclipse plugin for the developers of GAMA. It adds a **GAMA** menu to the men
 
 ## Installation
 
-Install it in the Eclipse IDE used to develop GAMA, not in GAMA itself. This Eclipse needs JDT and PDE and must run on Java 21 or newer. Eclipse can use its bundled JustJ Java 21 runtime; configure a separate JDK 25 under *Preferences > Java > Installed JREs* for compiling and running GAMA.
+Install it in the Eclipse IDE used to develop GAMA, not in GAMA itself. For GAMA development, use
+**Eclipse IDE for Java and DSL Developers 2026-03 or newer**, with JDT, PDE and Xtext/MWE2. This
+Eclipse must run on Java 21 or newer; its bundled JustJ runtime is suitable. A separate **full JDK 25**
+is needed for compiling and running GAMA; the guided setup below helps register it.
 
 1. In Eclipse, choose *Help > Install New Software...*
 2. Add the update site `https://gama-platform.org/gama.devtools/`.
 3. Select **GAMA Developer Tools**, then restart Eclipse.
+
+**Recommended:** accept the **Get started** prompt in a new workspace, or choose **GAMA > Get started...**.
+See [Getting started](#getting-started) for the guided and manual setup paths.
 
 Use **GAMA > Update GAMA tools...** to check the developer tools update site and install the latest
 update directly, without Eclipse's software selection wizard. It updates only the installed developer
@@ -106,18 +112,18 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Clean...** (context menu) | The same, limited to the GAMA plugins in the selection: only they are reset, cleaned and rebuilt. The initial refresh still covers the whole workspace. |
 | **Run GAMA > Build local release...** | Builds a runnable GAMA folder for the current OS and architecture, using a privately managed Maven and including JDK 25. Choose the source checkout, JDK and destination (see below). |
 | **Add to GAMA build...** (plugin context menu) | Adds the selected bundle to the Maven reactor and either reuses a feature that declares it or creates a dedicated feature, then ensures that feature is reachable from `gama.product/gama.product`. It is disabled only when the plugin and containing feature are already Maven-integrated and the feature is already in the GUI product. |
-| **Rebuild annotation processor** | Regenerates `gama.processor/gama.processor.jar` from `Generate Processor.jardesc`. Use it after modifying `gama.processor` or `gama.annotations`. |
-| **Regenerate Xtext grammar** | Runs `gaml.grammar/src/gaml/grammar/generator/Generate_GAML_Artefacts.mwe2` to regenerate the GAML grammar artifacts. The `gaml.grammar`, `gaml.compiler` and `gama.ui.editor` projects must be open. |
-| **Update file headers** | Sets the GAMA version and copyright end year, updates existing headers and adds missing ones, with a mandatory per-file preview and undo. |
+| **Repair GAMA plugins > Rebuild annotation processor** | Regenerates `gama.processor/gama.processor.jar` from `Generate Processor.jardesc`. Use it after modifying `gama.processor` or `gama.annotations`. |
+| **Repair GAMA plugins > Regenerate Xtext grammar** | Runs `gaml.grammar/src/gaml/grammar/generator/Generate_GAML_Artefacts.mwe2` to regenerate the GAML grammar artifacts. The `gaml.grammar`, `gaml.compiler` and `gama.ui.editor` projects must be open. |
+| **Repair GAMA plugins > Update file headers** | Sets the GAMA version and copyright end year, updates existing headers and adds missing ones, with a mandatory per-file preview and undo. |
 | **Report > Missing annotations** | Builds a Markdown report from the warnings of the processor. It lists the undocumented GAML elements and the untested operators, per plugin. |
-| **Generate missing tests** | Writes `models/Tests/Untested Operators.gaml` in each selected plugin (or all of them). It contains one `test` stub per operator reported as not tested, with its Java signature. Stubs already in the file are kept. |
+| **Repair GAMA plugins > Generate missing tests** | Writes `models/Tests/Untested Operators.gaml` in each selected plugin (or all of them). It contains one `test` stub per operator reported as not tested, with its Java signature. Stubs already in the file are kept. |
 | **Report > Native library dependencies** | Runs `jdeps` on compiled bundles and libraries and produces an interactive HTML dependency explorer and DOT export. This needs a full JDK, but no graph library. See [Static GAMA Dependencies Analysis](README_DEPENDENCIES_GRAPH.md) for standalone use and DOT compatibility. |
 | **Update GAMA tools...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
 | **Report an issue...** | Opens `https://github.com/gama-platform/gama.devtools/issues/new` in the external web browser. Review and submit the issue on GitHub (sign-in may be required); nothing is submitted automatically. |
 | **Create GAMA artefacts > New GAMA Plugin / Skill / Operator / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
 | **Install GAMA sources > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
 
-The Clean and Rebuild All shortcut takes precedence over Eclipse's standard Build All binding in the default
+The **Clean GAMA plugins** shortcut takes precedence over Eclipse's standard Build All binding in the default
 key scheme. It always targets all GAMA plugins, regardless of selection. Explicit user bindings and more
 specific editor bindings can still override it; configure these in *Preferences > General > Keys*.
 
@@ -127,26 +133,69 @@ a notification lists the removed references. This also applies to the installati
 
 ## Getting started
 
+### Recommended: guided setup
+
 **GAMA > Get started...** guides new developers, or anyone using a new Eclipse installation or workspace,
-through five pages. Every page can be revisited, and each check explains how to fix a problem, with links.
+through five pages. Install the developer tools first as described above. Every page can be revisited,
+and each check explains how to fix a problem, with links.
 
 1. **Eclipse**: the Eclipse version (2026-03 or newer), the Java running Eclipse (21 or newer), JDT, PDE,
    Xtext/MWE2 and the maximum heap. Missing components link to *Install New Software...*; **Check again**
-   repeats the checks after installation.
+   repeats the checks. Install or update missing software yourself and restart Eclipse when required,
+   then reopen the wizard. It does not install Eclipse components or change `eclipse.ini` automatically.
 2. **JDK 25**: lists the registered JDK 25 installations and those found in the usual locations
    (`JavaVirtualMachines`, Homebrew, SDKMAN!, `~/.jdks`, asdf, `/usr/lib/jvm`, `Program Files`,
    `JAVA_HOME`...), or lets you choose a folder. A download link is given when none is found. Going to the
-   next page registers the selected JDK, and optionally makes it the default JRE and associates it with
-   the JavaSE-25 and JavaSE-21 execution environments.
+   next page registers the selected JDK. Two options, selected by default, make it the workspace default
+   JRE and associate it with the JavaSE-25 and JavaSE-21 execution environments. Eclipse keeps running
+   on its own Java runtime. Downloading and installing the JDK itself remain manual.
 3. **Sources**: opens the core, graphical editor and community installers (see below), without starting
    a build. The page is complete when every project required by the GUI launch exists and is open.
-4. **Build**: saves the editors, then cleans and rebuilds all GAMA plugins, and reports build errors,
+4. **Build**: click **Clean and build now** to save the editors, refresh the workspace, repair plugin
+   settings, regenerate the GAML additions, and clean and rebuild. The results include build errors,
    plugin configuration problems and unresolved target-platform requirements.
-5. **Run GAMA**: uses the associated GUI launch configuration, or generates one with the chosen JDK, then
-   runs it, debugs it, or only creates it.
+5. **Run GAMA**: uses the associated GUI launch configuration, or generates one from `gama.product`
+   with the chosen registered JDK 25. Choose Run, Debug or configuration only, then Finish. Generating a
+   new default keeps the old configuration. Run/Debug refreshes the workspace before launching.
 
-When Eclipse opens a workspace without a `gama.core` project, it offers to open the wizard. Answer
-**Do not ask again in this workspace** to stop this prompt; the preference below turns it back on.
+The wizard is interactive, not an unattended installer: source selection and settings stay under your
+control, and each action must be started explicitly. Its source installers do not schedule their own final
+build, although Eclipse's normal automatic building can still occur during import. The **Build** page
+requires a completed build attempt, not a successful build, and the Eclipse checks are advisory; resolve
+reported problems before relying on a launch. Launch validation and PDE dependency checks still apply.
+
+The normal target platform is the running Eclipse installation; no GAMA `.target` file needs to be
+imported. The wizard reports unresolved dependencies and links to *Install New Software...* and
+*Preferences > Plug-in Development > Target Platform*. It neither installs those dependencies nor
+creates or activates a target definition.
+
+At Eclipse startup, a workspace **without a `gama.core` project** prompts to open the wizard, unless
+the workspace preference is disabled. A closed `gama.core` project also suppresses the prompt.
+Declining without selecting **Do not ask again in this workspace** allows the prompt at the next startup.
+The preference below turns it back on; **GAMA > Get started...** remains available regardless.
+
+### Alternative: manual setup
+
+The same setup can be performed without the guided wizard:
+
+1. Install Eclipse IDE for Java and DSL Developers 2026-03 or newer and PDE. Check that JDT and
+   Xtext/MWE2 are available, Eclipse runs on Java 21 or newer, and `eclipse.ini` sets at least
+   `-Xmx2048m` after `-vmargs`. Install these developer tools and restart Eclipse.
+2. Install a full JDK 25. Add it under *Preferences > Java > Installed JREs*, select it as the default,
+   and associate it with JavaSE-25 and JavaSE-21 under *Java > Installed JREs > Execution Environments*.
+3. Use **GAMA > Install GAMA sources > Install core plugins...**, or clone
+   `https://github.com/gama-platform/gama.git` (`main`) yourself and import its existing Eclipse projects
+   in place. Include the product, features, required plugins, annotations, processor and grammar projects.
+   Keep `gama.parent` imported but closed to avoid its Maven builder. The source installer can apply
+   working sets and optional workspace preferences; it schedules a final build when used independently.
+   Graphical editor and community plugins are optional.
+4. Use the running Eclipse as the target platform and install missing dependencies. Run
+   **GAMA > Clean GAMA plugins**, then **GAMA > Check workspace...** and resolve remaining Problems.
+5. Use **GAMA > Run GAMA > Configure...** to associate an existing GUI Eclipse Application configuration,
+   or generate a default with JDK 25. Start **GAMA > Run GAMA > Run UI** or **Debug UI**.
+
+For detailed source/build and contribution instructions, see
+[GAMA's development guide](https://github.com/gama-platform/gama/blob/main/DEVELOPING.md).
 
 ## Building a local GAMA release
 
@@ -261,8 +310,10 @@ and selected, preserving other profiles. The Eclipse export also contains cleanu
 precedence. Importing preferences does not rewrite, clean up or format source files.
 
 Closing **gama.parent** to disable its Maven compilation is recommended and selected by default. Finish saves
-editors, imports projects, applies the chosen settings and schedules a recursive workspace refresh followed by
-a clean and full workspace build. Configure a suitable JDK and resolve the GAMA target platform separately.
+editors, imports projects, applies the chosen settings and, when opened independently from **Install GAMA
+sources**, schedules a recursive workspace refresh followed by a clean and full workspace build.
+When opened from **Get started...**, the explicit **Build** step handles that final build instead.
+Neither source-installation path installs a JDK or resolves missing target-platform dependencies automatically.
 Cancellation/failure retains completed checkouts/imports and reports the failure; there is no destructive rollback.
 
 Explorer layout changes and JDT profile import are isolated in `install/WorkspaceSetup.java`. Eclipse does
@@ -317,7 +368,7 @@ Line endings, encoding and the rest of the file are preserved. Changes use Eclip
 
 ## Finding the Java implementation of a GAML keyword
 
-**GAMA > Keyword implementations...** opens a dialog like *Open Type*. It lists the GAML keywords declared in the Java sources of the open projects, with the Java element that implements each one:
+**GAMA > Search GAML keyword...** opens a dialog like *Open Type*. It lists the GAML keywords declared in the Java sources of the open projects, with the Java element that implements each one:
 
 - operators, statements, skills, species, types, file, experiment and display types, classes and constants;
 - actions and their arguments;
@@ -385,7 +436,7 @@ By default the project goes next to the other GAMA projects, in the git reposito
 - register the module in `gama.parent/pom.xml`;
 - add the plugin to `gama.feature.extensions`, or create a dedicated `gama.feature.extension.<shortcut>` feature and reference it in `gama.p2site/category.xml`.
 
-A **Clean and Rebuild** of the new plugin is then started.
+A clean and rebuild of the new plugin is then started, using the same operation as **Clean GAMA plugins**.
 
 ## Preferences
 
