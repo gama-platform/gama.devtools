@@ -58,8 +58,16 @@ public class InstallSourcesWizard extends Wizard {
 	private String prepared;
 	private Map<String, List<String>> definitions;
 
+	private final boolean scheduleBuild;
+
 	public InstallSourcesWizard(final Kind kind) {
+		this(kind, true);
+	}
+
+	/** @param scheduleBuild false when the caller refreshes, cleans and builds the workspace itself */
+	public InstallSourcesWizard(final Kind kind, final boolean scheduleBuild) {
 		this.kind = kind;
+		this.scheduleBuild = scheduleBuild;
 		setWindowTitle("Install " + kind.label);
 		setNeedsProgressMonitor(true);
 	}
@@ -224,6 +232,7 @@ public class InstallSourcesWizard extends Wizard {
 			options.setErrorMessage("Projects imported, but working-set setup failed: " + e.getMessage());
 			return false;
 		}
+		if (!scheduleBuild) return true;
 		new WorkspaceJob("Refresh, clean and build installed GAMA workspace") {
 			{
 				setRule(ResourcesPlugin.getWorkspace().getRoot());
@@ -545,9 +554,11 @@ public class InstallSourcesWizard extends Wizard {
 			note(body, "The Eclipse preference export includes Java compiler, formatter and cleanup settings. "
 					+ "Project-specific settings still take precedence. No source files are formatted or cleaned up.");
 			closeParent = check(body, "Turn off Maven compilation by closing gama.parent (recommended)", true, SWT.CHECK);
-			note(body, "Finish saves editors, imports projects, applies your choices and schedules a refresh, "
+			note(body, scheduleBuild ? "Finish saves editors, imports projects, applies your choices and schedules a refresh, "
 					+ "clean build and full build of the whole workspace. Resolve the GAMA target platform "
-					+ "and configure the required JDK separately if needed.");
+					+ "and configure the required JDK separately if needed."
+					: "Finish saves editors, imports projects and applies your choices. The Get started wizard "
+							+ "then cleans and builds the workspace.");
 			setControl(body);
 		}
 	}

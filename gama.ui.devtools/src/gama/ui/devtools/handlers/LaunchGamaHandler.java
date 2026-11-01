@@ -89,7 +89,8 @@ public final class LaunchGamaHandler extends AbstractHandler {
 		return null;
 	}
 
-	private static void launchAfterWorkspaceRefresh(final Shell shell, final ILaunchConfiguration config,
+	/** Refreshes the workspace recursively in a cancellable job, then launches the configuration. */
+	public static void launchAfterWorkspaceRefresh(final Shell shell, final ILaunchConfiguration config,
 			final String mode) {
 		var root = ResourcesPlugin.getWorkspace().getRoot();
 		Job refresh = Job.create("Refresh workspace before launching GAMA", monitor -> {

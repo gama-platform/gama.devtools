@@ -26,11 +26,15 @@ public class DevToolsPreferences extends AbstractPreferenceInitializer {
 	/** Prefix of the plugin ids proposed by the new plugin wizard. */
 	public static final String DEFAULT_PREFIX = "gama.devtools.defaultPrefix";
 
+	/** Whether to offer the Get started wizard when the workspace has no GAMA sources (stored per workspace). */
+	public static final String GETTING_STARTED_PROMPT = "gama.devtools.gettingStartedPrompt";
+
 	@Override
 	public void initializeDefaultPreferences() {
 		IPreferenceStore store = store();
 		store.setDefault(DEFAULT_VENDOR, "UMMISCO");
 		store.setDefault(DEFAULT_PREFIX, "gama.extension.");
+		store.setDefault(GETTING_STARTED_PROMPT, true);
 	}
 
 	/** The preference store of the plugin. */

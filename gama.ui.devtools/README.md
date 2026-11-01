@@ -84,7 +84,7 @@ every `GamlAdditions` and left no build errors. Save/build cancellation, termina
 a removed configuration or workbench shutdown prevent relaunch. Errors are reported; no UI is
 scheduled after the workbench closes.
 
-The **GAMA** menu contains, without headings or icons: the **Run GAMA** submenu
+The **GAMA** menu contains, without headings or icons: **Get started...** and a separator; the **Run GAMA** submenu
 (Configure..., followed by a separator, Run UI / Run headless / Run tests, a separator,
 Debug UI / Debug headless, then a separator and Build local release...);
 **Clean GAMA plugins**; **Repair GAMA plugins**; a separator; **Check workspace...** and
@@ -97,6 +97,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 
 | Command | What it does |
 |---|---|
+| **Get started...** | Step-by-step setup of a GAMA development environment: checks Eclipse and the JDK, installs and builds the sources, then runs GAMA (see below). |
 | **Check workspace...** | Checks open GAMA plugin configuration, workspace projects and target-platform bundles required by the GUI product, and whether Eclipse has a compatible JDK 25. Offers to repair fixable plugin settings or open the core source installer; it does not change anything without confirmation. |
 | **Search GAML keyword...** (`Ctrl/Cmd+Shift+Alt+K`) | Finds the Java code behind a GAML keyword (see below). |
 | **Run GAMA > Run UI / Run headless / Run tests / Debug UI / Debug headless** | Refreshes the workspace recursively, then launches workspace GAMA through editable PDE Eclipse Application configurations. |
@@ -123,6 +124,29 @@ specific editor bindings can still override it; configure these in *Preferences 
 Before refreshing and cleaning, the tools remove Eclipse project registrations whose directory or
 `.project` file no longer exists on disk. Only workspace references are removed, never project files;
 a notification lists the removed references. This also applies to the installation wizard's final build.
+
+## Getting started
+
+**GAMA > Get started...** guides new developers, or anyone using a new Eclipse installation or workspace,
+through five pages. Every page can be revisited, and each check explains how to fix a problem, with links.
+
+1. **Eclipse**: the Eclipse version (2026-03 or newer), the Java running Eclipse (21 or newer), JDT, PDE,
+   Xtext/MWE2 and the maximum heap. Missing components link to *Install New Software...*; **Check again**
+   repeats the checks after installation.
+2. **JDK 25**: lists the registered JDK 25 installations and those found in the usual locations
+   (`JavaVirtualMachines`, Homebrew, SDKMAN!, `~/.jdks`, asdf, `/usr/lib/jvm`, `Program Files`,
+   `JAVA_HOME`...), or lets you choose a folder. A download link is given when none is found. Going to the
+   next page registers the selected JDK, and optionally makes it the default JRE and associates it with
+   the JavaSE-25 and JavaSE-21 execution environments.
+3. **Sources**: opens the core, graphical editor and community installers (see below), without starting
+   a build. The page is complete when every project required by the GUI launch exists and is open.
+4. **Build**: saves the editors, then cleans and rebuilds all GAMA plugins, and reports build errors,
+   plugin configuration problems and unresolved target-platform requirements.
+5. **Run GAMA**: uses the associated GUI launch configuration, or generates one with the chosen JDK, then
+   runs it, debugs it, or only creates it.
+
+When Eclipse opens a workspace without a `gama.core` project, it offers to open the wizard. Answer
+**Do not ask again in this workspace** to stop this prompt; the preference below turns it back on.
 
 ## Building a local GAMA release
 
@@ -365,4 +389,5 @@ A **Clean and Rebuild** of the new plugin is then started.
 
 ## Preferences
 
-*Preferences > GAMA Developer Tools*: the default vendor and plugin id prefix of the wizards.
+*Preferences > GAMA Developer Tools*: the default vendor and plugin id prefix of the wizards, and whether
+to offer the **Get started** wizard when the workspace contains no GAMA sources (stored per workspace).

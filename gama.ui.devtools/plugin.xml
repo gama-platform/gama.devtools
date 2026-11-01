@@ -8,6 +8,8 @@
       <command id="gama.ui.devtools.install" categoryId="gama.ui.devtools.category" name="Install GAMA sources">
          <commandParameter id="gama.ui.devtools.installKind" name="Installation (CORE, GRAPHICAL, COMMUNITY)" optional="false"/>
       </command>
+      <command id="gama.ui.devtools.gettingStarted" categoryId="gama.ui.devtools.category"
+            name="Get started..." description="Checks Eclipse and the JDK, installs the GAMA sources, builds them and runs GAMA, step by step"/>
       <command id="gama.ui.devtools.updateTools" categoryId="gama.ui.devtools.category"
             name="Update GAMA tools..." description="Checks for and installs updates to GAMA Developer Tools"/>
       <command id="gama.ui.devtools.reportIssue" categoryId="gama.ui.devtools.category"
@@ -58,8 +60,10 @@
    <extension point="org.eclipse.ui.startup">
       <startup class="gama.ui.devtools.install.UpdateCheckStartup"/>
       <startup class="gama.ui.devtools.launch.GamaStartupMonitor"/>
+      <startup class="gama.ui.devtools.install.GettingStartedStartup"/>
    </extension>
    <extension point="org.eclipse.ui.handlers">
+      <handler commandId="gama.ui.devtools.gettingStarted" class="gama.ui.devtools.handlers.GettingStartedHandler"/>
       <handler commandId="gama.ui.devtools.launchGama" class="gama.ui.devtools.handlers.LaunchGamaHandler"/>
       <handler commandId="gama.ui.devtools.buildLocalRelease" class="gama.ui.devtools.handlers.BuildLocalReleaseHandler"/>
       <handler commandId="gama.ui.devtools.addToGamaBuild" class="gama.ui.devtools.handlers.AddToGamaBuildHandler">
@@ -146,6 +150,8 @@
          <menu id="gama.ui.devtools.menu" label="GAMA" mnemonic="G"/>
       </menuContribution>
       <menuContribution locationURI="menu:gama.ui.devtools.menu?after=additions">
+            <command commandId="gama.ui.devtools.gettingStarted" style="push"/>
+            <separator name="start" visible="true"/>
             <menu id="gama.ui.devtools.menu.run" label="Run GAMA">
                <command commandId="gama.ui.devtools.launchGama" label="Configure..." style="push">
                   <parameter name="gama.ui.devtools.launchMode" value="configure"/>

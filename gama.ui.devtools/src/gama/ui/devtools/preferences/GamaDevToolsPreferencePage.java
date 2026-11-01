@@ -12,6 +12,7 @@ package gama.ui.devtools.preferences;
 
 import static gama.ui.devtools.preferences.DevToolsPreferences.*;
 
+import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.ui.IWorkbench;
@@ -37,6 +38,8 @@ public class GamaDevToolsPreferencePage extends FieldEditorPreferencePage implem
 	protected void createFieldEditors() {
 		addField(new StringFieldEditor(DEFAULT_VENDOR, "Default vendor of new plugins:", getFieldEditorParent()));
 		addField(new StringFieldEditor(DEFAULT_PREFIX, "Default prefix of new plugin ids:", getFieldEditorParent()));
+		addField(new BooleanFieldEditor(GETTING_STARTED_PROMPT,
+				"Offer the Get started wizard when this workspace contains no GAMA sources", getFieldEditorParent()));
 	}
 
 }
