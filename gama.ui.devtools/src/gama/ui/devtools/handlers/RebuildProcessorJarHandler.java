@@ -35,10 +35,11 @@ import org.eclipse.jdt.ui.jarpackager.IManifestProvider;
 import org.eclipse.jdt.ui.jarpackager.IJarExportRunnable;
 import org.eclipse.jdt.ui.jarpackager.JarPackageData;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import gama.ui.devtools.jobs.CleanAndRebuildJob;
 import gama.ui.devtools.util.GamaProjects;
-import gama.ui.devtools.util.Notifier;
 import gama.ui.devtools.util.ResourceUtils;
 import gama.ui.devtools.release.ProcessorReuse;
 
@@ -65,6 +66,7 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 			MessageDialog.openError(shell, "GAMA", "'" + desc.getFullPath() + "' does not exist");
 			return null;
 		}
+		if (!PlatformUI.getWorkbench().saveAllEditors(true)) return null;
 		try {
 			var source = proc.getLocation().removeLastSegments(1).toFile().toPath().toRealPath();
 			String inputs = ProcessorReuse.inputs(source, () -> false);
@@ -91,8 +93,7 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 				ErrorDialog.openError(shell, "GAMA", "The processor jar could not be generated", status);
 			} else if (status.isOK()) {
 				ProcessorReuse.record(source, inputs);
-				Notifier.show("GAMA annotation processor", GamaProjects.PROCESSOR_JAR
-						+ " regenerated. Run 'GAMA > Clean GAMA plugins' to use it in all the plugins.");
+				new CleanAndRebuildJob(GamaProjects.all(), true).schedule();
 			} else {
 				ErrorDialog.openError(shell, "GAMA", "The processor export reported problems; release reuse is disabled.", status);
 			}

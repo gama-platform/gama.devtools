@@ -15,7 +15,6 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -26,9 +25,12 @@ import org.eclipse.debug.core.ILaunchesListener2;
 import org.eclipse.debug.ui.DebugUITools;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import gama.ui.devtools.jobs.CleanAndRebuildJob;
 import gama.ui.devtools.util.GamaProjects;
+import gama.ui.devtools.util.Notifier;
 import gama.ui.devtools.util.ResourceUtils;
 
 /** Runs the MWE2 workflow that generates the GAML grammar artifacts. */
@@ -52,6 +54,7 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 			}
 		}
 
+		if (!PlatformUI.getWorkbench().saveAllEditors(true)) return null;
 		try {
 			ILaunchManager manager = DebugPlugin.getDefault().getLaunchManager();
 			ILaunchConfigurationType type = manager
@@ -79,7 +82,7 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 					for (ILaunch launch : launches) {
 						if (configuration.equals(launch.getLaunchConfiguration())) {
 							manager.removeLaunchListener(this);
-							refreshGeneratedProjects();
+							rebuildAfterGeneration(launch);
 							return;
 						}
 					}
@@ -92,7 +95,14 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 				public void launchesChanged(final ILaunch[] launches) {}
 
 				@Override
-				public void launchesRemoved(final ILaunch[] launches) {}
+				public void launchesRemoved(final ILaunch[] launches) {
+					for (ILaunch launch : launches) {
+						if (configuration.equals(launch.getLaunchConfiguration())) {
+							manager.removeLaunchListener(this);
+							return;
+						}
+					}
+				}
 			};
 			manager.addLaunchListener(listener);
 			try {
@@ -116,17 +126,24 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 		return null;
 	}
 
-	private static void refreshGeneratedProjects() {
-		org.eclipse.core.runtime.jobs.Job.create("Refresh generated GAML grammar artifacts", monitor -> {
-			try {
-				for (int i = 1; i < PROJECTS.length; i++) {
-					GamaProjects.root().getProject(PROJECTS[i]).refreshLocal(IResource.DEPTH_INFINITE, monitor);
-				}
-				return Status.OK_STATUS;
-			} catch (CoreException e) {
-				ResourceUtils.log(e);
-				return e.getStatus();
+	private static void rebuildAfterGeneration(final ILaunch launch) {
+		try {
+			var processes = launch.getProcesses();
+			if (processes.length == 0) {
+				throw new CoreException(ResourceUtils.error("The grammar workflow did not start a process.", null));
 			}
-		}).schedule();
+			for (var process : processes) {
+				int exit = process.getExitValue();
+				if (exit != 0) {
+					throw new CoreException(ResourceUtils.error(
+							"The grammar workflow exited with status " + exit + ". See the Console view.", null));
+				}
+			}
+			new CleanAndRebuildJob(GamaProjects.all(), true).schedule();
+		} catch (CoreException e) {
+			ResourceUtils.log(e);
+			Notifier.show("GAML grammar regeneration failed",
+					e.getStatus().getMessage() + "\nThe workspace was not cleaned or rebuilt.");
+		}
 	}
 }
