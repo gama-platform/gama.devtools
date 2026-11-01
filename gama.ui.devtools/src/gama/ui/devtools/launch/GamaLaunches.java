@@ -160,6 +160,29 @@ public final class GamaLaunches {
 		GamaDevToolsActivator.getInstance().getPreferenceStore().setValue("launch." + flavor.name(), config.getMemento());
 	}
 
+	public static void validateFeatureInclusion() throws CoreException {
+		ILaunchConfiguration config = mapped(Flavor.GUI);
+		if (config != null && !config.getAttribute(IPDELauncherConstants.USE_CUSTOM_FEATURES, false)) {
+			throw error("The mapped GUI launch uses a plug-in selection. Restore a feature-based GUI configuration "
+					+ "under GAMA > Run GAMA > Configure... before including source features.");
+		}
+	}
+
+	public static void includeFeatures(final Set<String> features) throws CoreException {
+		validateFeatureInclusion();
+		ILaunchConfiguration config = mapped(Flavor.GUI);
+		if (config == null) return;
+		var copy = config.getWorkingCopy();
+		Set<String> selected = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.SELECTED_FEATURES, Set.<String>of()));
+		Set<String> roots = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.ROOT_FEATURES, Set.<String>of()));
+		for (String feature : features) selected.add(feature + ":" + IPDELauncherConstants.LOCATION_DEFAULT);
+		roots.addAll(features);
+		copy.setAttribute(IPDELauncherConstants.SELECTED_FEATURES, selected);
+		copy.setAttribute(IPDELauncherConstants.ROOT_FEATURES, roots);
+		copy.setAttribute(IPDELauncherConstants.AUTOMATIC_INCLUDE_REQUIREMENTS, true);
+		copy.doSave();
+	}
+
 	public static List<IVMInstall> jdks() {
 		List<IVMInstall> result = new ArrayList<>();
 		for (var type : JavaRuntime.getVMInstallTypes()) {

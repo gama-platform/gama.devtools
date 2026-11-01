@@ -465,9 +465,10 @@ public class GettingStartedWizard extends Wizard {
 
 		@Override
 		void createContents(final Composite parent) {
-			Composite actions = row(parent, 4);
+			Composite actions = row(parent, 5);
 			button(actions, "Install core plugins...", () -> install(Kind.CORE));
 			button(actions, "Install graphical editor...", () -> install(Kind.GRAPHICAL));
+			button(actions, "Install Copilot integration...", () -> install(Kind.COPILOT));
 			button(actions, "Install community plugins...", () -> install(Kind.COMMUNITY));
 			button(actions, "Check again", this::refresh);
 			note(parent, "The installers clone with Eclipse's built-in Git; a separate Git installation is not "

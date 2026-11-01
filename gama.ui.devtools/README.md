@@ -204,6 +204,7 @@ Choose **GAMA > Run GAMA > Build local release...**. The source checkout is dete
 from the workspace's `gama.parent` project, which must be imported; there is no source selector.
 The native destination chooser opens directly, with the release explanation as its prompt.
 Choose an existing destination directory **outside** that checkout; canceling does not start a build.
+Features explicitly included in the saved `gama.product/gama.product` are preserved.
 The destination chooser remembers the previous destination. Eclipse prompts to save modified editors before starting. The build uses
 the saved files on disk, including local source changes; it does not fetch, switch branches, modify
 the checkout, or run the checkout's platform-wide packaging scripts.
@@ -230,7 +231,10 @@ their original workspace locations. It then installs `gama.annotations`, `gama.p
 reachable from the GUI product are included. Use **Add to GAMA build...** on a workspace plugin to add those
 Maven, feature and product links. The snapshot's target environments and product packaging tasks are restricted to
 the current platform. Tests, signing, deployment and Maven build-cache restoration are disabled.
-As in GAMA's official build script, the optional Copilot feature is omitted from the snapshot's product.
+No optional integration is treated specially by the release builder: it uses the saved Maven reactor,
+repositories and product definition. Use the source installer's build-inclusion option below to integrate
+optional source features, or configure these files yourself. Installing an extension in the running IDE
+alone does not add it to a release.
 This builds the checkout's existing version; it does not bump versions or generate official installers.
 Maven runs with `-T 4` (four reactor workers), building independent modules
 in parallel while respecting dependencies. The annotations, processor and parent stages remain sequential.
@@ -269,7 +273,7 @@ or notarized release; macOS security prompts may require explicitly allowing the
 
 ## Installing source projects
 
-The **Install GAMA sources** submenu provides three variants of the same wizard:
+The **Install GAMA sources** submenu provides four variants of the same wizard:
 
 - **Core plugins** uses `https://github.com/gama-platform/gama.git`, branch `main`. It lists top-level
   Eclipse projects, preselecting those listed in `gama.parent/pom.xml` plus `gama.parent`, including
@@ -278,6 +282,9 @@ The **Install GAMA sources** submenu provides three variants of the same wizard:
   are not preselected.
 - **Graphical editor** uses `https://github.com/gama-platform-plugins/gama.graphical.modeling.git`,
   branch `GAMA_2026-06`, with all its Eclipse projects preselected.
+- **Copilot integration** uses `https://github.com/gama-platform/gama.copilot.git`, branch `main`,
+  with its Eclipse projects preselected. This checks out the standalone integration sources, not
+  Microsoft's Copilot implementation.
 - **Community plugins** discovers repositories in `https://github.com/gama-platform-plugins` and lists their
   Eclipse project paths on `GAMA_2026-06`, including nested projects. Load the list, then explicitly select
   projects; only repositories containing selected projects are checked out. Repositories without that branch
@@ -303,6 +310,24 @@ projects are ignored. Selected community projects
 that exist in the workspace are added to **==================== COMMUNITY**; it is populated dynamically rather
 than maintained as an obsolete fixed experimental-project list. An option displays working sets as roots in
 both Project Explorer and Package Explorer.
+Copilot integration projects use the same dynamic **COMMUNITY** working set.
+
+All non-core source installers offer **Include imported source features in GAMA launches and
+Maven/release builds**, unchecked by default. This adds the imported feature IDs to the GUI product
+and to the mapped feature-based GUI launch, and registers the source build in the GAMA reactor.
+An independent repository with a root POM is included as an aggregator: all its Maven modules are built
+with their existing parents and settings, rather than rewriting them to inherit from GAMA.
+Its HTTPS p2 repositories are also added to the GAMA parent for product dependency resolution;
+repository URLs may reference properties declared in that source root POM.
+Repositories without a root POM register their imported Maven projects individually.
+Already imported projects from the same checkout can be included by reopening the installer with
+no new projects selected. A mapped plug-in-based launch must first be replaced by a feature-based
+configuration under **GAMA > Run GAMA > Configure...**.
+
+The option does not install third-party bundles into Eclipse: resolve the optional features' dependencies
+in the target platform before launching. For plug-ins without a feature, use **GAMA > Add to GAMA build...**
+on the project instead. Normal GAMA users can install Copilot from GAMA's Support menu without checking
+out sources or changing the default GAMA build.
 
 Preference import is **opt-in**, with separate checkboxes for `Eclipse Preferences for Gama.epf`,
 `Cleanup rules for Gama.xml` and `Code formatter rules for Gama.xml`. The named GAMA profiles are installed

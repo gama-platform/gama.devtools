@@ -34,6 +34,7 @@ public final class InstallModel {
 		CORE("core plugins", "https://github.com/gama-platform/gama.git", "main", "gama"),
 		GRAPHICAL("graphical editor", "https://github.com/gama-platform-plugins/gama.graphical.modeling.git",
 				COMMUNITY_BRANCH, "gama.graphical.modeling"),
+		COPILOT("Copilot integration", "https://github.com/gama-platform/gama.copilot.git", "main", "gama.copilot"),
 		COMMUNITY("community plugins", "", COMMUNITY_BRANCH, "");
 
 		public final String label, url, branch, folder;
@@ -108,7 +109,8 @@ public final class InstallModel {
 				String name = document.getElementsByTagName("name").item(0).getTextContent().strip();
 				boolean required = kind == Kind.CORE && REQUIRED_CORE_PROJECTS.contains(name);
 				projects.add(new Project(name, directory, repository,
-						required || kind == Kind.GRAPHICAL || recommended.contains(directory.normalize()), required));
+						required || kind == Kind.GRAPHICAL || kind == Kind.COPILOT
+								|| recommended.contains(directory.normalize()), required));
 			}
 		}
 		projects.sort(Comparator.comparing(Project::name));

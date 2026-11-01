@@ -45,6 +45,8 @@ import gama.ui.devtools.install.InstallModel.RemoteProject;
 import gama.ui.devtools.install.InstallModel.Repository;
 import gama.ui.devtools.install.RepositoryCheckout;
 import gama.ui.devtools.install.WorkspaceSetup;
+import gama.ui.devtools.launch.GamaLaunches;
+import gama.ui.devtools.util.GamaBuildIntegration;
 import gama.ui.devtools.util.Notifier;
 import gama.ui.devtools.util.ResourceUtils;
 
@@ -191,8 +193,12 @@ public class InstallSourcesWizard extends Wizard {
 			for (Object item : options.workingSets.getCheckedElements()) sets.add((String) item);
 		}
 		boolean eclipse = options.eclipse.getSelection(), cleanup = options.cleanup.getSelection(),
-				formatter = options.formatter.getSelection(), closeParent = options.closeParent.getSelection();
+				formatter = options.formatter.getSelection(), closeParent = options.closeParent.getSelection(),
+				includeBuild = options.includeBuild != null && options.includeBuild.getSelection();
+		Path sourceDirectory = Path.of(source.location.getText().strip()).toAbsolutePath().normalize();
+		Set<String> includedFeatures = new LinkedHashSet<>();
 		if (!run(options, monitor -> {
+			if (includeBuild) GamaLaunches.validateFeatureInclusion();
 			var workspace = ResourcesPlugin.getWorkspace();
 			workspace.run(progress -> {
 				SubMonitor sub = SubMonitor.convert(progress, "Importing projects and configuring workspace", selected.size() + 2);
@@ -208,6 +214,16 @@ public class InstallSourcesWizard extends Wizard {
 					if (sub.isCanceled()) throw new OperationCanceledException();
 					WorkspaceSetup.preferences(eclipse, cleanup, formatter);
 					sub.worked(1);
+					if (includeBuild) {
+						Map<Path, List<Project>> sources = new LinkedHashMap<>();
+						for (Project project : projects.available) {
+							if (!selected.contains(project)
+									&& !ResourcesPlugin.getWorkspace().getRoot().getProject(project.name()).exists()) continue;
+							Path checkout = kind == Kind.COMMUNITY ? sourceDirectory.resolve(project.repository().name()) : sourceDirectory;
+							sources.computeIfAbsent(checkout, key -> new ArrayList<>()).add(project);
+						}
+						includedFeatures.addAll(GamaBuildIntegration.includeSources(sources, sub.newChild(0)));
+					}
 					var parent = workspace.getRoot().getProject("gama.parent");
 					if (closeParent && parent.isOpen()) parent.close(sub.split(1));
 				} catch (CoreException | OperationCanceledException e) {
@@ -222,14 +238,15 @@ public class InstallSourcesWizard extends Wizard {
 			}, workspace.getRoot(), 0, monitor);
 		})) return false;
 		try {
-			List<Project> community = kind == Kind.COMMUNITY ? projects.available : List.of();
+			if (!includedFeatures.isEmpty()) GamaLaunches.includeFeatures(includedFeatures);
+			List<Project> community = kind == Kind.COMMUNITY || kind == Kind.COPILOT ? projects.available : List.of();
 			var workingSets = WorkspaceSetup.workingSets(definitions, sets, community);
 			if (options.sets.getSelection() && options.explorers.getSelection() && !workingSets.isEmpty()) {
 				WorkspaceSetup.organizeExplorers(workingSets);
 			}
 		} catch (Exception e) {
 			ResourceUtils.log(e);
-			options.setErrorMessage("Projects imported, but working-set setup failed: " + e.getMessage());
+			options.setErrorMessage("Projects imported, but launch or working-set setup failed: " + e.getMessage());
 			return false;
 		}
 		if (!scheduleBuild) return true;
@@ -428,7 +445,7 @@ public class InstallSourcesWizard extends Wizard {
 			super("projects");
 			setTitle("Import projects");
 			setDescription("Choose projects to import. Existing workspace projects cannot be selected. "
-					+ "Core Maven modules and graphical editor projects are preselected; "
+					+ "Core Maven modules, graphical editor and Copilot integration projects are preselected; "
 					+ String.join(" and ", InstallModel.REQUIRED_CORE_PROJECTS.stream().sorted().toList())
 					+ " are always imported.");
 		}
@@ -499,7 +516,7 @@ public class InstallSourcesWizard extends Wizard {
 	}
 
 	private final class OptionsPage extends WizardPage {
-		Button sets, explorers, eclipse, cleanup, formatter, closeParent;
+		Button sets, explorers, eclipse, cleanup, formatter, closeParent, includeBuild;
 		CheckboxTableViewer workingSets;
 
 		OptionsPage() {
@@ -528,7 +545,7 @@ public class InstallSourcesWizard extends Wizard {
 					long present = availableDefinitions.get(name).stream()
 							.filter(p -> ResourcesPlugin.getWorkspace().getRoot().getProject(p).exists()
 									|| imports.contains(p)).count();
-					if (InstallModel.COMMUNITY_SET.equals(name) && kind == Kind.COMMUNITY) {
+					if (InstallModel.COMMUNITY_SET.equals(name) && (kind == Kind.COMMUNITY || kind == Kind.COPILOT)) {
 						present = projects.available.stream().filter(p -> projects.exists(p) || imports.contains(p.name())).count();
 					}
 					return name + " (" + present + " available; missing projects are ignored)";
@@ -538,7 +555,7 @@ public class InstallSourcesWizard extends Wizard {
 			workingSets.setCheckedElements(availableDefinitions.keySet().stream().filter(name -> switch (kind) {
 				case CORE -> !name.endsWith("COMMUNITY") && !name.endsWith("GRAPHICAL MODELLING");
 				case GRAPHICAL -> name.endsWith("GRAPHICAL MODELLING");
-				case COMMUNITY -> name.equals(InstallModel.COMMUNITY_SET);
+				case COMMUNITY, COPILOT -> name.equals(InstallModel.COMMUNITY_SET);
 			}).toArray());
 			explorers = check(body, "Show working sets as roots in Project Explorer and Package Explorer", true, SWT.CHECK);
 			sets.addListener(SWT.Selection, e -> {
@@ -554,6 +571,14 @@ public class InstallSourcesWizard extends Wizard {
 			note(body, "The Eclipse preference export includes Java compiler, formatter and cleanup settings. "
 					+ "Project-specific settings still take precedence. No source files are formatted or cleaned up.");
 			closeParent = check(body, "Turn off Maven compilation by closing gama.parent (recommended)", true, SWT.CHECK);
+			if (kind != Kind.CORE) {
+				includeBuild = check(body, "Include imported source features in GAMA launches and Maven/release builds",
+						false, SWT.CHECK);
+				note(body, "This updates the GUI product, the mapped feature-based GUI launch and the GAMA Maven reactor. "
+						+ "Standalone repositories are built with their own Maven parents and modules; their p2 repositories "
+						+ "are made available to GAMA. Resolve their dependencies in Eclipse's target platform separately. "
+						+ "For a plugin without a feature, use its GAMA > Add to GAMA build... context menu.");
+			}
 			note(body, scheduleBuild ? "Finish saves editors, imports projects, applies your choices and schedules a refresh, "
 					+ "clean build and full build of the whole workspace. Resolve the GAMA target platform "
 					+ "and configure the required JDK separately if needed."

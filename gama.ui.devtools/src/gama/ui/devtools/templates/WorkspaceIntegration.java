@@ -15,6 +15,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.XMLConstants;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Element;
+
 import gama.ui.devtools.install.InstallModel;
 
 /**
@@ -38,25 +45,31 @@ public final class WorkspaceIntegration {
 	public static String addModulePath(final String pom, final String modulePath, final String afterPrefix) {
 		String module = modulePath.replace('\\', '/');
 		if (modules(pom).contains(module)) return pom;
-		int anchor = -1;
-		for (String existing : modules(pom)) {
-			if (existing.startsWith("../" + afterPrefix)) {
-				int candidate = pom.indexOf("<module>" + existing + "</module>");
-				if (candidate > anchor) anchor = candidate;
+		try {
+			var document = InstallModel.xml(new ByteArrayInputStream(pom.getBytes(StandardCharsets.UTF_8)));
+			Element modules = child(document.getDocumentElement(), "modules");
+			Element added = document.createElementNS(modules.getNamespaceURI(), "module");
+			added.setTextContent(module);
+			org.w3c.dom.Node after = null;
+			for (var node = modules.getFirstChild(); node != null; node = node.getNextSibling()) {
+				if (node instanceof Element existing && "module".equals(tagName(existing))
+						&& existing.getTextContent().strip().startsWith("../" + afterPrefix)) after = node;
 			}
+			if (after == null) modules.appendChild(added);
+			else modules.insertBefore(added, after.getNextSibling());
+			return serialize(document);
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Cannot add a source module to the GAMA parent POM.", e);
 		}
-		if (anchor >= 0) {
-			int eol = pom.indexOf('\n', anchor);
-			if (eol < 0) throw new IllegalArgumentException("The GAMA parent POM has no line break after its module.");
-			int bol = pom.lastIndexOf('\n', anchor) + 1;
-			String indent = pom.substring(bol, anchor);
-			return pom.substring(0, eol + 1) + indent + "<module>" + escape(module) + "</module>\n"
-					+ pom.substring(eol + 1);
-		}
-		int end = pom.indexOf("</modules>");
-		if (end < 0) throw new IllegalArgumentException("The GAMA parent POM has no <modules> element.");
-		int bol = pom.lastIndexOf('\n', end) + 1;
-		return pom.substring(0, bol) + "\t\t<module>" + escape(module) + "</module>\n" + pom.substring(bol);
+	}
+
+	private static String serialize(final org.w3c.dom.Document document) throws Exception {
+		TransformerFactory factory = TransformerFactory.newInstance();
+		factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+		var output = new java.io.StringWriter();
+		factory.newTransformer().transform(new DOMSource(document), new StreamResult(output));
+		return output.toString();
 	}
 
 	/**
@@ -77,6 +90,87 @@ public final class WorkspaceIntegration {
 		if (end < 0) throw new IllegalArgumentException("The GAMA product has no <features> element.");
 		return product.substring(0, end) + "      <feature id=\"" + attribute(featureId) + "\" installMode=\"root\"/>\n"
 				+ product.substring(end);
+	}
+
+	/** Makes an independent source build's p2 dependencies available to the GAMA product resolver. */
+	public static String addP2Repositories(final String pom, final String sourcePom) {
+		try {
+			var target = InstallModel.xml(new ByteArrayInputStream(pom.getBytes(StandardCharsets.UTF_8)));
+			var source = InstallModel.xml(new ByteArrayInputStream(sourcePom.getBytes(StandardCharsets.UTF_8)));
+			Element sourceRepositories = child(source.getDocumentElement(), "repositories");
+			if (sourceRepositories == null) return pom;
+			Element root = target.getDocumentElement();
+			Element repositories = child(root, "repositories");
+			boolean changed = false;
+			for (var node = sourceRepositories.getFirstChild(); node != null; node = node.getNextSibling()) {
+				if (!(node instanceof Element repository) || !"repository".equals(tagName(repository))) continue;
+				if (!"p2".equals(value(repository, "layout"))) continue;
+				String id = value(repository, "id");
+				String url = repositoryUrl(value(repository, "url"), child(source.getDocumentElement(), "properties"));
+				if (id.isBlank() || url.contains("${") || !url.startsWith("https://")) {
+					throw new IllegalArgumentException("Source p2 repositories need an id and an explicit HTTPS URL: " + url);
+				}
+				boolean present = false;
+				if (repositories != null) {
+					for (var item = repositories.getFirstChild(); item != null; item = item.getNextSibling()) {
+						if (!(item instanceof Element existing) || !"repository".equals(tagName(existing))) continue;
+						boolean same = value(existing, "url").replaceAll("/+$", "").equals(url.replaceAll("/+$", ""))
+								&& "p2".equals(value(existing, "layout"));
+						if (id.equals(value(existing, "id")) && !same) {
+							throw new IllegalArgumentException("Repository id " + id + " is already used by another repository.");
+						}
+						present |= same;
+					}
+				}
+				if (present) continue;
+				if (repositories == null) {
+					repositories = target.createElementNS(root.getNamespaceURI(), "repositories");
+					root.appendChild(repositories);
+				}
+				Element added = target.createElementNS(root.getNamespaceURI(), "repository");
+				for (String name : List.of("id", "url", "layout")) {
+					Element entry = target.createElementNS(root.getNamespaceURI(), name);
+					entry.setTextContent(name.equals("url") ? url : value(repository, name));
+					added.appendChild(entry);
+				}
+				repositories.appendChild(added);
+				changed = true;
+			}
+			if (!changed) return pom;
+			return serialize(target);
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Cannot merge source p2 repositories: " + e.getMessage(), e);
+		}
+	}
+
+	private static String repositoryUrl(final String template, final Element properties) {
+		String result = template;
+		java.util.Set<String> visited = new java.util.HashSet<>();
+		while (result.contains("${")) {
+			if (properties == null || visited.size() >= 100 || !visited.add(result)) {
+				throw new IllegalArgumentException("Cannot resolve source p2 repository URL: " + template);
+			}
+			var matcher = java.util.regex.Pattern.compile("\\$\\{([^}]+)}").matcher(result);
+			if (!matcher.find()) throw new IllegalArgumentException("Invalid source repository URL: " + template);
+			String replacement = value(properties, matcher.group(1));
+			if (replacement.isEmpty()) {
+				throw new IllegalArgumentException("Missing source repository property: " + matcher.group(1));
+			}
+			result = result.substring(0, matcher.start()) + replacement + result.substring(matcher.end());
+		}
+		return result;
+	}
+
+	private static Element child(final Element parent, final String name) {
+		for (var node = parent.getFirstChild(); node != null; node = node.getNextSibling()) {
+			if (node instanceof Element element && name.equals(tagName(element))) return element;
+		}
+		return null;
+	}
+
+	private static String value(final Element parent, final String name) {
+		Element element = child(parent, name);
+		return element == null ? "" : element.getTextContent().strip();
 	}
 
 	/**

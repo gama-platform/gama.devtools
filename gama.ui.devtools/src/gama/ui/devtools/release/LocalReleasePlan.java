@@ -174,16 +174,6 @@ public record LocalReleasePlan(Path source, Path jdk, Path destination, Target t
 			if (text(execution, "id").equals("archive-products")) execution.getParentNode().removeChild(execution);
 		}
 		write(product, productPath);
-
-		// Match travis/build.sh: Tycho does not honor the optional Copilot feature.
-		Path definitionPath = snapshot.resolve("gama.product/gama.product");
-		Document definition = read(definitionPath);
-		var features = definition.getElementsByTagName("feature");
-		for (int i = features.getLength() - 1; i >= 0; i--) {
-			Element feature = (Element) features.item(i);
-			if (feature.getAttribute("id").equals("gama.feature.copilot")) feature.getParentNode().removeChild(feature);
-		}
-		write(definition, definitionPath);
 	}
 
 	public void reuseProcessor(Path snapshot) throws Exception {

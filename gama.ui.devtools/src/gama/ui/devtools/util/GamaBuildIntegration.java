@@ -30,9 +30,11 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.w3c.dom.Element;
 
 import gama.ui.devtools.install.InstallModel;
+import gama.ui.devtools.templates.WorkspaceIntegration;
 
 /** Reads the Maven, feature, and product links used by the local GAMA release build. */
 public final class GamaBuildIntegration {
@@ -46,6 +48,63 @@ public final class GamaBuildIntegration {
 			boolean pluginMavenIntegrated) {}
 
 	private GamaBuildIntegration() {}
+
+	/** Includes explicitly selected source features without changing independent Maven parent relationships. */
+	public static Set<String> includeSources(final Map<Path, List<InstallModel.Project>> repositories,
+			final IProgressMonitor monitor) throws Exception {
+		IProject parent = GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT);
+		IProject product = GamaProjects.root().getProject(PRODUCT_PROJECT);
+		String parentPom = Files.readString(file(parent, "pom.xml"));
+		String productXml = Files.readString(file(product, PRODUCT_FILE));
+		Set<String> included = new LinkedHashSet<>();
+		for (var repository : repositories.entrySet()) {
+			for (var source : repository.getValue()) {
+				IProject workspaceProject = GamaProjects.root().getProject(source.name());
+				if (!workspaceProject.exists() || workspaceProject.getLocation() == null
+						|| !projectPath(workspaceProject).equals(source.directory().toRealPath())) {
+					throw new IOException("Import " + source.name() + " from " + source.directory()
+							+ " before including these sources in the GAMA build.");
+				}
+			}
+			List<InstallModel.Project> features = repository.getValue().stream()
+					.filter(project -> Files.isRegularFile(project.directory().resolve("feature.xml"))).toList();
+			if (features.isEmpty()) continue;
+			for (var feature : features) {
+				var definition = read(feature.directory().resolve("feature.xml"), "Cannot read " + feature.name() + "/feature.xml.");
+				String id = definition.getDocumentElement().getAttribute("id").strip();
+				if (id.isEmpty()) throw new IOException("The source feature " + feature.name() + " has no id.");
+				productXml = WorkspaceIntegration.addFeatureToProduct(productXml, id);
+				included.add(id);
+			}
+			Path rootPom = repository.getKey().resolve("pom.xml");
+			if (Files.isRegularFile(rootPom)) {
+				// Add the standalone aggregator, so its modules retain their own parent and build settings.
+				parentPom = WorkspaceIntegration.addModulePath(parentPom,
+						relativeOrAbsolute(projectPath(parent), repository.getKey()), "gama.feature.");
+				parentPom = WorkspaceIntegration.addP2Repositories(parentPom, Files.readString(rootPom));
+			} else {
+				for (var feature : features) {
+					if (!Files.isRegularFile(feature.directory().resolve("pom.xml"))) {
+						throw new IOException("The source feature " + feature.name() + " needs a pom.xml for Maven inclusion.");
+					}
+				}
+				for (var source : repository.getValue()) {
+					Path pom = source.directory().resolve("pom.xml");
+					if (!Files.isRegularFile(pom)) continue;
+					parentPom = WorkspaceIntegration.addModulePath(parentPom,
+							relativeOrAbsolute(projectPath(parent), source.directory()), "gama.feature.");
+					parentPom = WorkspaceIntegration.addP2Repositories(parentPom, Files.readString(pom));
+				}
+			}
+		}
+		if (included.isEmpty()) {
+			throw new IOException("No imported source features are available to include. For a plugin without a feature, "
+					+ "use GAMA > Add to GAMA build... on its project.");
+		}
+		ResourceUtils.write(parent, "pom.xml", parentPom, monitor);
+		ResourceUtils.write(product, PRODUCT_FILE, productXml, monitor);
+		return included;
+	}
 
 	public static Analysis analyze(final IProject plugin) throws CoreException {
 		String pluginId = bundleId(plugin);
@@ -137,8 +196,33 @@ public final class GamaBuildIntegration {
 				} catch (IOException e) {
 					throw error("Cannot resolve Maven module path " + module + " in " + pom + ".", e);
 				}
-				if (resolved.equals(location)) return hasGamaParent(project);
+				if (resolved.equals(location)) {
+					Element declaredParent = child(read(file(project, "pom.xml"), "Cannot read the source POM.")
+							.getDocumentElement(), "parent");
+					return declaredParent == null || !"org.gama".equals(text(declaredParent, "groupId"))
+							|| !"gama.parent".equals(text(declaredParent, "artifactId")) || hasGamaParent(project);
+				}
+				if (containsModule(resolved, location, new LinkedHashSet<>())) return true;
 			}
+		}
+		return false;
+	}
+
+	private static boolean containsModule(final Path directory, final Path location, final Set<Path> visited)
+			throws CoreException {
+		if (!visited.add(directory) || !Files.isRegularFile(directory.resolve("pom.xml"))) return false;
+		Element modules = child(read(directory.resolve("pom.xml"), "Cannot inspect source reactor " + directory)
+				.getDocumentElement(), "modules");
+		if (modules == null) return false;
+		for (var node = modules.getFirstChild(); node != null; node = node.getNextSibling()) {
+			if (!(node instanceof Element module) || !"module".equals(module.getTagName())) continue;
+			Path nested = directory.resolve(module.getTextContent().strip()).normalize();
+			try {
+				if (Files.exists(nested)) nested = nested.toRealPath();
+			} catch (IOException e) {
+				throw error("Cannot resolve source reactor module " + nested, e);
+			}
+			if (nested.equals(location) || containsModule(nested, location, visited)) return true;
 		}
 		return false;
 	}
