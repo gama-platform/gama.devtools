@@ -9,6 +9,9 @@ import xml.etree.ElementTree as ET
 from zipfile import ZipFile
 
 
+# Only the newest releases are advertised: each child costs two requests on every p2 check.
+ADVERTISED_RELEASES = 3
+
 METADATA = ("content.jar", "content.xml", "content.xml.xz",
             "artifacts.jar", "artifacts.xml", "artifacts.xml.xz", "p2.index")
 
@@ -55,9 +58,14 @@ def assemble(incoming, site, release):
 
     for name in METADATA:
         (site / name).unlink(missing_ok=True)
-    children = [p for p in sorted(releases.iterdir())
-                if p.is_dir() and any((p / n).is_file()
-                                     for n in ("content.jar", "content.xml", "content.xml.xz"))]
+    def age_key(path):
+        match = re.match(r"\d+", path.name)
+        return (int(match.group()) if match else -1, path.name)
+
+    children = sorted((p for p in releases.iterdir()
+                       if p.is_dir() and any((p / n).is_file()
+                                            for n in ("content.jar", "content.xml", "content.xml.xz"))),
+                      key=age_key)[-ADVERTISED_RELEASES:]
     for kind in ("Metadata", "Artifact"):
         root = ET.Element("repository", {
             "name": "GAMA Developer Tools",
