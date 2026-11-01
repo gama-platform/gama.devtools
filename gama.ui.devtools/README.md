@@ -13,7 +13,8 @@ is needed for compiling and running GAMA; the guided setup below helps register 
 2. Add the update site `https://gama-platform.org/gama.devtools/`.
 3. Select **GAMA Developer Tools**, then restart Eclipse.
 
-**Recommended:** accept the **Get started** prompt in a new workspace, or choose **GAMA > Get started...**.
+**Recommended:** accept the startup prompt when the workspace has no `gama.core` project, or choose
+**GAMA > Get started...**.
 See [Getting started](#getting-started) for the guided and manual setup paths.
 
 Use **GAMA > Update GAMA tools...** to check the developer tools update site and install the latest
@@ -195,7 +196,7 @@ The same setup can be performed without the guided wizard:
    or generate a default with JDK 25. Start **GAMA > Run GAMA > Run UI** or **Debug UI**.
 
 For detailed source/build and contribution instructions, see
-[GAMA's development guide](https://github.com/gama-platform/gama/blob/main/DEVELOPING.md).
+[GAMA's developer wiki](https://github.com/gama-platform/gama/wiki/developingGAMA).
 
 ## Building a local GAMA release
 
