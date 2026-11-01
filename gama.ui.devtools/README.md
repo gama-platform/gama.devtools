@@ -284,7 +284,9 @@ The **Install GAMA sources** submenu provides four variants of the same wizard:
   branch `GAMA_2026-06`, with all its Eclipse projects preselected.
 - **Copilot integration** uses `https://github.com/gama-platform/gama.copilot.git`, branch `main`,
   with its Eclipse projects preselected. This checks out the standalone integration sources, not
-  Microsoft's Copilot implementation.
+  Microsoft's Copilot implementation. Its thin update site contains only the GAMA adapter and wrapper;
+  Microsoft's official p2 repository supplies Copilot dependencies. Explicit source-build inclusion
+  merges that dependency repository like any other source repository's p2 dependencies.
 - **Community plugins** discovers repositories in `https://github.com/gama-platform-plugins` and lists their
   Eclipse project paths on `GAMA_2026-06`, including nested projects. Load the list, then explicitly select
   projects; only repositories containing selected projects are checked out. Repositories without that branch
