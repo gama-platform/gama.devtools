@@ -13,7 +13,7 @@ the setup prompt in a workspace without `gama.core`, or choose **GAMA > Get star
 helps register a separate **full JDK 25**; Eclipse's own Java runtime need not change.
 
 See [Getting started](gama.ui.devtools/README.md#getting-started) for the recommended guided path
-and the manual alternative. The [GAMA development guide](https://github.com/gama-platform/gama/blob/main/DEVELOPING.md)
+and the manual alternative. The [GAMA developer wiki](https://github.com/gama-platform/gama/wiki/developingGAMA)
 also covers the source build and contribution workflow.
 
 | Project | Content |
