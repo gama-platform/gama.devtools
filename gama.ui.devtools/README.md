@@ -199,7 +199,9 @@ The **Install GAMA sources** submenu provides three variants of the same wizard:
 
 - **Core plugins** uses `https://github.com/gama-platform/gama.git`, branch `main`. It lists top-level
   Eclipse projects, preselecting those listed in `gama.parent/pom.xml` plus `gama.parent`, including
-  `gama.export`, `gama.ui.export` and `gama.feature.export`. Already imported projects are not preselected.
+  `gama.export`, `gama.ui.export` and `gama.feature.export`. `gama.processor`, `gama.annotations` and
+  `gaml.grammar` are required and always imported (they cannot be deselected). Already imported projects
+  are not preselected.
 - **Graphical editor** uses `https://github.com/gama-platform-plugins/gama.graphical.modeling.git`,
   branch `GAMA_2026-06`, with all its Eclipse projects preselected.
 - **Community plugins** discovers repositories in `https://github.com/gama-platform-plugins` and lists their

@@ -26,6 +26,9 @@ public final class InstallModel {
 	public static final String COMMUNITY_SET = "==================== COMMUNITY";
 	public static final String COMMUNITY_BRANCH = "GAMA_2026-06";
 	public static final String PROJECT_SETS = "Project sets for Gama.psf";
+	/** Core projects that must always be imported (unless already present in the workspace). */
+	public static final Set<String> REQUIRED_CORE_PROJECTS =
+			Set.of("gama.processor", "gama.annotations", "gaml.grammar");
 
 	public enum Kind {
 		CORE("core plugins", "https://github.com/gama-platform/gama.git", "main", "gama"),
@@ -45,7 +48,8 @@ public final class InstallModel {
 
 	public record Repository(String name, String url, String branch) {}
 
-	public record Project(String name, Path directory, Repository repository, boolean recommended) {}
+	public record Project(String name, Path directory, Repository repository, boolean recommended,
+			boolean required) {}
 
 	public record RemoteProject(Repository repository, String path) {
 		@Override
@@ -102,8 +106,9 @@ public final class InstallModel {
 			try (InputStream input = Files.newInputStream(description)) {
 				Element document = xml(input).getDocumentElement();
 				String name = document.getElementsByTagName("name").item(0).getTextContent().strip();
+				boolean required = kind == Kind.CORE && REQUIRED_CORE_PROJECTS.contains(name);
 				projects.add(new Project(name, directory, repository,
-						kind == Kind.GRAPHICAL || recommended.contains(directory.normalize())));
+						required || kind == Kind.GRAPHICAL || recommended.contains(directory.normalize()), required));
 			}
 		}
 		projects.sort(Comparator.comparing(Project::name));

@@ -142,7 +142,7 @@ public class InstallSourcesWizard extends Wizard {
 							RepositoryCheckout.prepare(entry.getKey(), checkout, sub.split(1));
 							for (Project project : InstallModel.projects(checkout, entry.getKey(), kind)) {
 								if (entry.getValue().contains(project.directory())) {
-									available.add(new Project(project.name(), project.directory(), project.repository(), true));
+									available.add(new Project(project.name(), project.directory(), project.repository(), true, false));
 								}
 							}
 							for (Path expected : entry.getValue()) {
@@ -419,7 +419,9 @@ public class InstallSourcesWizard extends Wizard {
 			super("projects");
 			setTitle("Import projects");
 			setDescription("Choose projects to import. Existing workspace projects cannot be selected. "
-					+ "Core Maven modules and graphical editor projects are preselected.");
+					+ "Core Maven modules and graphical editor projects are preselected; "
+					+ String.join(" and ", InstallModel.REQUIRED_CORE_PROJECTS.stream().sorted().toList())
+					+ " are always imported.");
 		}
 
 		@Override
@@ -430,15 +432,20 @@ public class InstallSourcesWizard extends Wizard {
 				@Override public String getText(final Object element) {
 					Project project = (Project) element;
 					return project.name() + "  -  " + project.repository().name()
-							+ (exists(project) ? " (already in workspace)" : "");
+							+ (exists(project) ? " (already in workspace)" : project.required() ? " (required)" : "");
 				}
 			});
 			viewer.addCheckStateListener(e -> {
-				if (exists((Project) e.getElement())) viewer.setChecked(e.getElement(), false);
+				Project project = (Project) e.getElement();
+				if (exists(project)) viewer.setChecked(project, false);
+				else if (project.required()) viewer.setChecked(project, true);
 				validate();
 			});
 			selectButtons(body, viewer, () -> {
-				for (Project project : available) if (exists(project)) viewer.setChecked(project, false);
+				for (Project project : available) {
+					if (exists(project)) viewer.setChecked(project, false);
+					else if (project.required()) viewer.setChecked(project, true);
+				}
 				validate();
 			});
 			note(body, "Projects remain in their Git checkout; they are not copied into the workspace. "
@@ -460,7 +467,7 @@ public class InstallSourcesWizard extends Wizard {
 		private void populate() {
 			viewer.setInput(available);
 			viewer.setCheckedElements(available.stream().filter(p -> p.recommended() && !exists(p)).toArray());
-			viewer.setGrayedElements(available.stream().filter(this::exists).toArray());
+			viewer.setGrayedElements(available.stream().filter(p -> exists(p) || p.required()).toArray());
 			validate();
 		}
 
