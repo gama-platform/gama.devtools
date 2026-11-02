@@ -21,6 +21,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.CheckboxTableViewer;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -99,30 +100,63 @@ public class InstallSourcesWizard extends Wizard {
 	private boolean run(final WizardPage page, final Operation operation) {
 		page.setErrorMessage(null);
 		page.setMessage(null);
-		try {
-			getContainer().run(true, true, monitor -> {
-				try {
-					operation.run(monitor);
-				} catch (OperationCanceledException e) {
-					throw new InterruptedException();
-				} catch (InterruptedException e) {
-					throw e;
-				} catch (Exception e) {
-					if (monitor.isCanceled()) throw new InterruptedException();
-					throw new InvocationTargetException(e);
-				} finally {
-					monitor.done();
+		while (true) {
+			try {
+				runWithProgress(operation);
+				return true;
+			} catch (InvocationTargetException e) {
+				Throwable cause = e.getCause();
+				if (cause instanceof RepositoryCheckout.LocalChangesException changes) {
+					MessageDialog dialog = new MessageDialog(page.getShell(), "Local changes", null,
+							"Some files in the existing GAMA installation have been modified locally. "
+									+ "Before I proceed with the installation, they need to be either dismissed or stashed.",
+							MessageDialog.QUESTION, new String[] { "Abort installation", "Stash them" }, 1);
+					if (dialog.open() != 1) {
+						page.setMessage("Installation aborted. Local changes were left untouched.", WizardPage.WARNING);
+						return false;
+					}
+					try {
+						runWithProgress(monitor -> RepositoryCheckout.stash(changes.directory(), monitor));
+					} catch (InvocationTargetException stashError) {
+						showError(page, stashError.getCause());
+						return false;
+					} catch (InterruptedException stashCancelled) {
+						page.setMessage("Cancelled. Local changes were left untouched.", WizardPage.WARNING);
+						return false;
+					}
+					continue;
 				}
-			});
-			return true;
-		} catch (InvocationTargetException e) {
-			ResourceUtils.log(e.getCause());
-			page.setErrorMessage(e.getCause().getMessage()
-					+ " Completed checkouts/imports are kept; correct the problem and retry.");
-		} catch (InterruptedException e) {
-			page.setMessage("Cancelled. Completed checkouts/imports are kept.", WizardPage.WARNING);
+				showError(page, cause);
+				return false;
+			} catch (InterruptedException e) {
+				page.setMessage("Cancelled. Completed checkouts/imports are kept.", WizardPage.WARNING);
+				return false;
+			}
 		}
-		return false;
+	}
+
+	private void runWithProgress(final Operation operation)
+			throws InvocationTargetException, InterruptedException {
+		getContainer().run(true, true, monitor -> {
+			try {
+				operation.run(monitor);
+			} catch (OperationCanceledException e) {
+				throw new InterruptedException();
+			} catch (InterruptedException e) {
+				throw e;
+			} catch (Exception e) {
+				if (monitor.isCanceled()) throw new InterruptedException();
+				throw new InvocationTargetException(e);
+			} finally {
+				monitor.done();
+			}
+		});
+	}
+
+	private static void showError(final WizardPage page, final Throwable error) {
+		ResourceUtils.log(error);
+		page.setErrorMessage(error.getMessage()
+				+ " Completed checkouts/imports are kept; correct the problem and retry.");
 	}
 
 	@Override
@@ -285,8 +319,8 @@ public class InstallSourcesWizard extends Wizard {
 		SourcePage() {
 			super("repositories");
 			setTitle("Install " + kind.label);
-			setDescription("Choose a checkout location and branch. Next clones or fast-forwards clean repositories; "
-					+ "existing local changes are never discarded.");
+			setDescription("Choose a checkout location and branch. Next clones or fast-forwards repositories. "
+					+ "If an existing repository has local changes, you can stash them before continuing.");
 			setPageComplete(false);
 		}
 

@@ -16,10 +16,24 @@ import org.eclipse.jgit.transport.URIish;
 
 import gama.ui.devtools.install.InstallModel.Repository;
 
-/** Clones or fast-forwards a clean checkout, never resetting or stashing user changes. */
+/** Clones or fast-forwards repositories and only stashes user changes after explicit confirmation. */
 public final class RepositoryCheckout {
 
 	private RepositoryCheckout() {}
+
+	public static final class LocalChangesException extends IOException {
+
+		private static final long serialVersionUID = 1L;
+		private final Path directory;
+
+		LocalChangesException(final Path directory) {
+			this.directory = directory;
+		}
+
+		public Path directory() {
+			return directory;
+		}
+	}
 
 	public static void prepare(final Repository source, final Path directory, final IProgressMonitor monitor)
 			throws Exception {
@@ -47,9 +61,11 @@ public final class RepositoryCheckout {
 			if (!sameRemote(origin, source.url())) {
 				throw new IOException(directory + " has a different origin (" + origin + "). Choose another directory or URL.");
 			}
-			if (!git.status().call().isClean() || git.getRepository().getRepositoryState() != RepositoryState.SAFE) {
-				throw new IOException(directory + " has local changes or an unfinished Git operation. "
-						+ "Commit/stash them yourself, or choose another directory. Nothing was overwritten.");
+			if (git.getRepository().getRepositoryState() != RepositoryState.SAFE) {
+				throw new IOException(directory + " has an unfinished Git operation. Resolve it before installing.");
+			}
+			if (!git.status().call().isClean()) {
+				throw new LocalChangesException(directory);
 			}
 			String remoteBranch = Constants.R_REMOTES + "origin/" + source.branch();
 			git.fetch().setRemote("origin").setRefSpecs(new RefSpec("+refs/heads/" + source.branch() + ":" + remoteBranch))
@@ -73,6 +89,19 @@ public final class RepositoryCheckout {
 					.setFastForward(FastForwardMode.FF_ONLY).call();
 			if (!result.getMergeStatus().isSuccessful()) {
 				throw new IOException("Cannot fast-forward " + directory + ": " + result.getMergeStatus());
+			}
+		}
+	}
+
+	public static void stash(final Path directory, final IProgressMonitor monitor) throws Exception {
+		if (monitor.isCanceled()) throw new OperationCanceledException();
+		try (Git git = Git.open(directory.toFile())) {
+			if (git.getRepository().getRepositoryState() != RepositoryState.SAFE) {
+				throw new IOException(directory + " has an unfinished Git operation. Resolve it before installing.");
+			}
+			if (git.status().call().isClean()) return;
+			if (git.stashCreate().setIncludeUntracked(true).call() == null) {
+				throw new IOException("Could not stash the local changes in " + directory + ".");
 			}
 		}
 	}

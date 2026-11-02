@@ -472,7 +472,7 @@ public class GettingStartedWizard extends Wizard {
 			button(actions, "Install community plugins...", () -> install(Kind.COMMUNITY));
 			button(actions, "Check again", this::refresh);
 			note(parent, "The installers clone with Eclipse's built-in Git; a separate Git installation is not "
-					+ "required. Existing checkouts are fast-forwarded only if they have no local changes. "
+					+ "required. If an existing checkout has local changes, you can stash them before continuing. "
 					+ "The workspace is cleaned and built in the next step.");
 		}
 
