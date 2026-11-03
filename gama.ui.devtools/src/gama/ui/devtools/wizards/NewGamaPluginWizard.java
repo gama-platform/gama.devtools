@@ -11,6 +11,7 @@
 package gama.ui.devtools.wizards;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
@@ -49,7 +51,10 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.eclipse.ui.ide.IDE;
+import org.w3c.dom.Element;
 
+import gama.ui.devtools.GamaDevToolsActivator;
+import gama.ui.devtools.install.InstallModel;
 import gama.ui.devtools.jobs.CleanAndRebuildJob;
 import gama.ui.devtools.preferences.DevToolsPreferences;
 import gama.ui.devtools.templates.CodeTemplates;
@@ -183,7 +188,7 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 		ResourceUtils.write(p, "META-INF/MANIFEST.MF", CodeTemplates.manifest(spec, jars), sub.split(1));
 		ResourceUtils.write(p, "build.properties", CodeTemplates.buildProperties(spec, jars), sub.split(1));
 		ResourceUtils.write(p, "plugin.xml", CodeTemplates.pluginXml(), sub.split(1));
-		ResourceUtils.write(p, "pom.xml", CodeTemplates.pluginPom(spec.id()), sub.split(1));
+		ResourceUtils.write(p, "pom.xml", CodeTemplates.pluginPom(spec.id(), spec.categoryId()), sub.split(1));
 		ResourceUtils.write(p, "README.md", CodeTemplates.readme(spec), sub.split(1));
 		String pkgPath = "src/" + spec.basePackage().replace('.', '/');
 		ResourceUtils.createFolder(p, pkgPath, sub.split(1));
@@ -256,21 +261,47 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 		}
 	}
 
+	private record Category(String id, String name) {}
+
 	/** The page of the wizard. */
 	private class Page extends WizardPage {
 
 		/** Widgets. */
 		Text id, name, vendor, pkg, description, location;
+		Combo category;
 		Button libs, example, inExtensions, standalone, register;
 		List<Button> folders = new ArrayList<>();
 		private boolean pkgEdited, nameEdited;
 		private final Set<String> existingShortcuts = new TreeSet<>();
+		private final List<Category> categories = new ArrayList<>();
+		private String categoryError;
 
 		Page() {
 			super("plugin");
 			setTitle("New GAMA Plugin");
 			setDescription("Creates a plugin extending GAML, with the annotation processor configured.");
 			for (IProject p : GamaProjects.all()) { existingShortcuts.add(GamaProjects.shortcut(p.getName())); }
+			try {
+				var entry = GamaDevToolsActivator.getInstance().getBundle().getEntry("categories.xml");
+				if (entry == null) { throw new IOException("The bundled categories.xml is missing"); }
+				try (var input = entry.openStream()) {
+					var elements = InstallModel.xml(input).getElementsByTagName("category");
+					Set<String> ids = new TreeSet<>();
+					for (int i = 0; i < elements.getLength(); i++) {
+						Element element = (Element) elements.item(i);
+						String categoryId = element.getAttribute("id").strip();
+						String categoryName = element.getAttribute("name").strip();
+						if (categoryId.isEmpty() || categoryName.isEmpty() || !ids.add(categoryId)) {
+							throw new IOException("Categories must have a unique id and a non-empty name");
+						}
+						categories.add(new Category(categoryId, categoryName));
+					}
+					if (categories.isEmpty()) { throw new IOException("No categories are defined"); }
+				}
+			} catch (Exception e) {
+				categoryError = "Cannot load categories.xml: " + e.getMessage();
+				ResourceUtils.log(e);
+			}
 		}
 
 		PluginSpec spec() {
@@ -278,7 +309,8 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 			for (Button b : folders) { if (b.getSelection()) { mf.add((String) b.getData()); } }
 			if (example.getSelection() && !mf.contains("Tests")) { mf.add(0, "Tests"); }
 			return new PluginSpec(id.getText().strip(), name.getText().strip(), vendor.getText().strip(),
-					pkg.getText().strip(), description.getText().strip(), libs.getSelection(), mf,
+					pkg.getText().strip(), description.getText().strip(),
+					categories.get(category.getSelectionIndex()).id(), libs.getSelection(), mf,
 					example.getSelection(), standalone.getSelection());
 		}
 
@@ -297,6 +329,10 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 			vendor = text(c, "Vendor:", DevToolsPreferences.get(DevToolsPreferences.DEFAULT_VENDOR));
 			pkg = text(c, "Base package:", prefix);
 			description = text(c, "Description:", "");
+			category = new Combo(c, SWT.DROP_DOWN | SWT.READ_ONLY);
+			label(c, "Category:", category, 2);
+			category.setItems(categories.stream().map(Category::name).toArray(String[]::new));
+			category.addListener(SWT.Selection, e -> validate());
 			location = new Text(c, SWT.BORDER);
 			label(c, "Location:", location, 1);
 			location.setText(defaultLocation());
@@ -391,6 +427,10 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 		private void validate() {
 			setErrorMessage(null);
 			setPageComplete(false);
+			if (categoryError != null) {
+				setErrorMessage(categoryError);
+				return;
+			}
 			String i = id.getText().strip();
 			IStatus s = JavaConventions.validatePackageName(i, JavaCore.VERSION_21, JavaCore.VERSION_21);
 			if (s.getSeverity() == IStatus.ERROR) {
@@ -418,6 +458,10 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 			}
 			if (name.getText().isBlank() || vendor.getText().isBlank()) {
 				setErrorMessage("Enter the name and the vendor of the plugin");
+				return;
+			}
+			if (category.getSelectionIndex() < 0) {
+				setErrorMessage("Choose a category for the plugin");
 				return;
 			}
 			IPath l = location();

@@ -174,16 +174,20 @@ public final class CodeTemplates {
 	}
 
 	/** {@code pom.xml} of a plugin. */
-	public static String pluginPom(final String artifactId) {
-		return pom(artifactId, "eclipse-plugin");
+	public static String pluginPom(final String artifactId, final String categoryId) {
+		return pom(artifactId, "eclipse-plugin", """
+				  <properties>
+				    <gama.category>%s</gama.category>
+				  </properties>
+				""".formatted(xml(categoryId)));
 	}
 
 	/** {@code pom.xml} of a feature. */
 	public static String featurePom(final String artifactId) {
-		return pom(artifactId, "eclipse-feature");
+		return pom(artifactId, "eclipse-feature", "");
 	}
 
-	private static String pom(final String artifactId, final String packaging) {
+	private static String pom(final String artifactId, final String packaging, final String properties) {
 		return """
 				<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 				  <modelVersion>4.0.0</modelVersion>
@@ -195,7 +199,7 @@ public final class CodeTemplates {
 				  </parent>
 				  <artifactId>%s</artifactId>
 				  <packaging>%s</packaging>
-				  <build>
+				%s  <build>
 				    <plugins>
 				      <plugin>
 				        <groupId>org.codehaus.mojo</groupId>
@@ -204,7 +208,7 @@ public final class CodeTemplates {
 				    </plugins>
 				  </build>
 				</project>
-				""".formatted(artifactId, packaging);
+				""".formatted(artifactId, packaging, properties);
 	}
 
 	/** {@code .project} of a feature. */

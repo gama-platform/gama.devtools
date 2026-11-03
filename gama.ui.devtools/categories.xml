@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<categories>
+   <category id="gama.category.connect" name="Connect GAMA to"/>
+   <category id="gama.category.io" name="Read and write"/>
+   <category id="gama.category.display" name="Visualisation"/>
+   <category id="gama.category.domain" name="Thematic extensions"/>
+   <category id="gama.category.tool" name="Functional extensions"/>
+   <category id="gama.category.interaction" name="User interaction"/>
+   <category id="gama.category.interface" name="User interface"/>
+   <category id="gama.category.dependencies" name="External libraries"/>
+   <category id="gama.category.ai" name="AI, LLMs, ML"/>
+   <category id="gama.category.core" name="Core components"/>
+   <category id="gama.category.models" name="Model library"/>
+   <category id="gama.category.other" name="Others"/>
+</categories>

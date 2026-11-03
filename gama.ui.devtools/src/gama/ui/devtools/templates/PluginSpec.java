@@ -25,6 +25,8 @@ import java.util.List;
  *            the base Java package
  * @param description
  *            a short description (used in the feature)
+ * @param categoryId
+ *            the id of the category selected from {@code categories.xml}
  * @param libs
  *            whether a {@code libs/} folder for third-party jars is created
  * @param modelFolders
@@ -35,8 +37,8 @@ import java.util.List;
  *            whether a dedicated {@code gama.feature.extension.<shortcut>} feature is created (otherwise the plugin
  *            is added to {@code gama.feature.extensions})
  */
-public record PluginSpec(String id, String name, String vendor, String basePackage, String description, boolean libs,
-		List<String> modelFolders, boolean exampleCode, boolean standaloneFeature) {
+public record PluginSpec(String id, String name, String vendor, String basePackage, String description,
+		String categoryId, boolean libs, List<String> modelFolders, boolean exampleCode, boolean standaloneFeature) {
 
 	/** The last segment of the id, used by the processor to name the generated package. */
 	public String shortcut() {

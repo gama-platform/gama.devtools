@@ -460,6 +460,18 @@ gama.extension.foo/
   .classpath  .factorypath  .settings/ (APT, JDT, encoding)
 ```
 
+Choose a category by its display name from the bundled `categories.xml`. The wizard writes its id to
+the plugin's `pom.xml` as a Maven property, for example:
+
+```xml
+<properties>
+    <gama.category>gama.category.io</gama.category>
+</properties>
+```
+
+This is build-time metadata only; no category extension or runtime manifest header is generated.
+The `plugin.xml` still declares `gaml.extension`.
+
 By default the project goes next to the other GAMA projects, in the git repository. The wizard can also do the following:
 - register the module in `gama.parent/pom.xml`;
 - add the plugin to `gama.feature.extensions`, or create a dedicated `gama.feature.extension.<shortcut>` feature and reference it in `gama.p2site/category.xml`.
