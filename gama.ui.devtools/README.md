@@ -236,7 +236,7 @@ repositories and product definition. Use the source installer's build-inclusion 
 optional source features, or configure these files yourself. Installing an extension in the running IDE
 alone does not add it to a release.
 This builds the checkout's existing version; it does not bump versions or generate official installers.
-Maven runs with `-T 4` (four reactor workers), building independent modules
+Maven runs with `-T 2C` (two reactor workers per CPU core), building independent modules
 in parallel while respecting dependencies. The annotations, processor and parent stages remain sequential.
 
 After a successful **Rebuild annotation processor**, the tools record SHA-256 fingerprints of the
