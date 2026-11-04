@@ -36,6 +36,7 @@ import gama.ui.devtools.launch.GamaLaunches;
 import gama.ui.devtools.launch.GamaLaunches.Flavor;
 import gama.ui.devtools.launch.GamaStartupMonitor;
 import gama.ui.devtools.util.ResourceUtils;
+import gama.ui.devtools.util.ExplorerRefresh;
 import gama.ui.devtools.install.InstallModel.Kind;
 import gama.ui.devtools.wizards.InstallSourcesWizard;
 
@@ -103,6 +104,7 @@ public final class LaunchGamaHandler extends AbstractHandler {
 		});
 		refresh.setRule(root);
 		refresh.setUser(true);
+		ExplorerRefresh.after(refresh);
 		refresh.addJobChangeListener(new JobChangeAdapter() {
 			@Override
 			public void done(final org.eclipse.core.runtime.jobs.IJobChangeEvent event) {

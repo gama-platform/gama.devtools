@@ -47,6 +47,7 @@ import gama.ui.devtools.install.InstallModel.Repository;
 import gama.ui.devtools.install.RepositoryCheckout;
 import gama.ui.devtools.install.WorkspaceSetup;
 import gama.ui.devtools.launch.GamaLaunches;
+import gama.ui.devtools.util.ExplorerRefresh;
 import gama.ui.devtools.util.GamaBuildIntegration;
 import gama.ui.devtools.util.Notifier;
 import gama.ui.devtools.util.ResourceUtils;
@@ -288,6 +289,7 @@ public class InstallSourcesWizard extends Wizard {
 			{
 				setRule(ResourcesPlugin.getWorkspace().getRoot());
 				setUser(true);
+				ExplorerRefresh.after(this);
 			}
 
 			@Override

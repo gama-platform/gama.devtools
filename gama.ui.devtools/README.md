@@ -132,6 +132,11 @@ Before refreshing and cleaning, the tools remove Eclipse project registrations w
 `.project` file no longer exists on disk. Only workspace references are removed, never project files;
 a notification lists the removed references. This also applies to the installation wizard's final build.
 
+The recursive disk refresh is independent of which projects or folders are expanded in an Explorer.
+After cleaning/building or the pre-launch refresh, the tools also explicitly refresh already-open
+Project and Package Explorers, including expanded branches, without collapsing them or opening new views.
+Workspace-wide cleaning discovers the GAMA plugins after refreshing their metadata from disk.
+
 ## Getting started
 
 ### Recommended: guided setup

@@ -31,6 +31,7 @@ import org.eclipse.jdt.apt.core.util.AptConfig;
 
 import gama.ui.devtools.config.ConfigurationIssue;
 import gama.ui.devtools.config.PluginConfigurationChecker;
+import gama.ui.devtools.util.ExplorerRefresh;
 import gama.ui.devtools.util.GamaProjects;
 import gama.ui.devtools.util.Notifier;
 
@@ -67,6 +68,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 		this.wholeWorkspace = wholeWorkspace;
 		setRule(ResourcesPlugin.getWorkspace().getRoot());
 		setUser(true);
+		ExplorerRefresh.after(this);
 	}
 
 	/** Whether the last run regenerated every GamlAdditions and left no build error. */
@@ -82,13 +84,13 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 		try {
 			sub.subTask("Removing missing project references");
 			GamaProjects.removeMissingProjects(sub.split(2));
+			sub.subTask("Refreshing workspace");
+			ResourcesPlugin.getWorkspace().getRoot().refreshLocal(IResource.DEPTH_INFINITE, sub.split(5));
 			targets.removeIf(project -> !project.exists() || !project.isOpen());
 			if (wholeWorkspace) {
 				targets.clear();
 				targets.addAll(GamaProjects.all());
 			}
-			sub.subTask("Refreshing workspace");
-			ResourcesPlugin.getWorkspace().getRoot().refreshLocal(IResource.DEPTH_INFINITE, sub.split(5));
 			sub.subTask("Repairing configuration");
 			List<ConfigurationIssue> issues = PluginConfigurationChecker.check(targets, sub.split(3));
 			PluginConfigurationChecker.repair(issues, sub.split(2));
