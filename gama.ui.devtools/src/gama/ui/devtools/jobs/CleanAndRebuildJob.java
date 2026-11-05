@@ -28,6 +28,7 @@ import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jdt.apt.core.util.AptConfig;
+import org.eclipse.jdt.core.JavaCore;
 
 import gama.ui.devtools.config.ConfigurationIssue;
 import gama.ui.devtools.config.PluginConfigurationChecker;
@@ -41,10 +42,12 @@ import gama.ui.devtools.util.Notifier;
  * re-enabling annotation processing, cleaning and rebuilding):
  * <ol>
  * <li>refreshes the whole workspace recursively from disk;</li>
+ * <li>sets the workspace Java compiler compliance, source and target levels to Java 25;</li>
  * <li>repairs the configuration of the plugins (see {@link PluginConfigurationChecker});</li>
  * <li>disables annotation processing on the plugins;</li>
  * <li>deletes their 'gaml' folders;</li>
- * <li>re-enables annotation processing, which resets the generated source folder managers of JDT APT;</li>
+ * <li>touches their factory paths so JDT APT unloads cached processor classes before building;</li>
+ * <li>re-enables annotation processing and recreates the generated source folders;</li>
  * <li>cleans and fully rebuilds the whole workspace (except Maven-only projects like gama.parent) or only the
  * plugins;</li>
  * <li>verifies that every plugin got its {@code GamlAdditions} and reports the result in a notification.</li>
@@ -91,6 +94,10 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 				targets.clear();
 				targets.addAll(GamaProjects.all());
 			}
+			sub.subTask("Setting workspace Java compiler to 25");
+			var compilerOptions = JavaCore.getOptions();
+			JavaCore.setComplianceOptions(JavaCore.VERSION_25, compilerOptions);
+			JavaCore.setOptions(compilerOptions);
 			sub.subTask("Repairing configuration");
 			List<ConfigurationIssue> issues = PluginConfigurationChecker.check(targets, sub.split(3));
 			PluginConfigurationChecker.repair(issues, sub.split(2));
@@ -102,6 +109,9 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 				for (IProject p : targets) {
 					IFolder gaml = p.getFolder(GamaProjects.GEN_SRC_DIR);
 					if (gaml.exists()) { gaml.delete(IResource.FORCE, del.split(1)); }
+					// JDT APT invalidates processor classloaders on factory-path deltas at PRE_BUILD.
+					// Toggling APT or cleaning alone leaves iterative processors' static caches alive.
+					p.getFile(".factorypath").touch(del.newChild(0));
 				}
 			} finally {
 				for (IProject p : targets) { AptConfig.setEnabled(GamaProjects.java(p), true); }
