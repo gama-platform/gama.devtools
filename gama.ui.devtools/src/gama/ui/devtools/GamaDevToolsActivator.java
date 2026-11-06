@@ -13,6 +13,7 @@ package gama.ui.devtools;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import gama.ui.devtools.install.BranchChangeStartup;
 import gama.ui.devtools.install.UpdateCheckStartup;
 import gama.ui.devtools.launch.GamaStartupMonitor;
 /**
@@ -75,6 +76,7 @@ public class GamaDevToolsActivator extends AbstractUIPlugin {
 	 */
 	@Override
 	public void stop(final BundleContext context) throws Exception {
+		BranchChangeStartup.stop();
 		UpdateCheckStartup.stop();
 		GamaStartupMonitor.uninstall();
 		instance = null;
