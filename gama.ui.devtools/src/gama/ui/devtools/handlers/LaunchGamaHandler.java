@@ -29,6 +29,7 @@ import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import gama.ui.devtools.launch.GamaLaunchDialog;
@@ -125,6 +126,7 @@ public final class LaunchGamaHandler extends AbstractHandler {
 				});
 			}
 		});
+		PlatformUI.getWorkbench().getProgressService().showInDialog(shell, refresh);
 		refresh.schedule();
 	}
 }

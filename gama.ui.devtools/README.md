@@ -60,8 +60,10 @@ debugging the UI, exporting a local release, and searching for a GAML keyword.
 Run and Debug use the same GUI launch configuration as the menu commands. When no configuration
 is associated yet, they open **Configure GAMA Launches** before launching; canceling does not launch.
 Every GAMA Developer Tools launch command refreshes the whole workspace recursively from disk before
-starting the configured UI, headless or test launch. The refresh runs as a cancellable background job;
-canceling it prevents the launch. The icons include high-resolution variants for HiDPI displays.
+starting the configured UI, headless or test launch. The refresh runs as a cancellable job with an Eclipse
+progress dialog; canceling it prevents the launch. Eclipse then handles the launch normally. The progress
+dialog respects Eclipse's preference to run operations in the background. The icons include
+high-resolution variants for HiDPI displays.
 
 When a GAMA UI Eclipse Application process terminates with exit status **42**, a dialog proposes
 **Clean and Relaunch**, **Clean Only** or **Ignore**, once per launch. This status is reserved by
@@ -109,7 +111,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Search GAML keyword...** (`Ctrl/Cmd+Shift+Alt+K`) | Finds the Java code behind a GAML keyword (see below). |
 | **Run GAMA > Run UI / Run headless / Run tests / Debug UI / Debug headless** | Refreshes the workspace recursively, then launches workspace GAMA through editable PDE Eclipse Application configurations. |
 | **Run GAMA > Configure...** | Associates each flavor with an existing configuration or generates a default; provides editing and confirmed restoration of defaults. |
-| **Clean GAMA plugins** (`Cmd+B` on macOS, `Ctrl+B` on Windows/Linux) | Saves the editors, refreshes the whole workspace recursively from disk and automatically repairs the plugins configuration (see *Configuration checks*). Disables the annotation processor, deletes the `gaml/` folders, touches `.factorypath` to invalidate cached processor classloaders and re-enables the processor. Factory-path contents and other processor entries are preserved. These steps only affect the GAMA plugins. Then runs a clean build and a full build of the whole workspace, and checks that every `GamlAdditions.java` was regenerated. The configuration is checked again afterwards: remaining problems appear in the Problems view, with quick fixes (`Ctrl/Cmd+1`). No dialog is shown and the job can be cancelled. |
+| **Clean GAMA plugins** (`Cmd+B` on macOS, `Ctrl+B` on Windows/Linux) | Saves the editors, refreshes the whole workspace recursively from disk and automatically repairs the plugins configuration (see *Configuration checks*). Disables the annotation processor, deletes the `gaml/` folders, touches `.factorypath` to invalidate cached processor classloaders and re-enables the processor. Factory-path contents and other processor entries are preserved. These steps only affect the GAMA plugins. Then runs a clean build and a full build of the whole workspace, and checks that every `GamlAdditions.java` was regenerated. The configuration is checked again afterwards: remaining problems appear in the Problems view, with quick fixes (`Ctrl/Cmd+1`). A cancellable Eclipse progress dialog appears unless background operation is preferred; it closes when the job finishes. Problems are reported, but there is no success summary. |
 | **Automatic branch-change rebuild** | While Eclipse is open, checks the Git branch of repositories containing open GAMA plugins. After a branch switch settles, automatically refreshes, cleans and rebuilds the workspace using the same GAMA plugin reset as **Clean GAMA plugins**. The initial check does not trigger a build. |
 | **Clean...** (context menu) | The same, limited to the GAMA plugins in the selection: only they are reset, cleaned and rebuilt. The initial refresh still covers the whole workspace. |
 | **Run GAMA > Build local release...** | Builds a runnable GAMA folder for the current OS and architecture, using a privately managed Maven and including JDK 25. Choose the source checkout, JDK and destination (see below). |

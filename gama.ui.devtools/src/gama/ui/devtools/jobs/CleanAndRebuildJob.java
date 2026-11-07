@@ -37,7 +37,7 @@ import gama.ui.devtools.util.GamaProjects;
 import gama.ui.devtools.util.Notifier;
 
 /**
- * Resets the GAML annotation processing of a set of GAMA plugins and rebuilds them, without any dialog. This
+ * Resets the GAML annotation processing of a set of GAMA plugins and rebuilds them. This
  * replaces the usual manual recipe (deleting the 'gaml' folder, closing/reopening the projects, disabling and
  * re-enabling annotation processing, cleaning and rebuilding):
  * <ol>
@@ -50,7 +50,7 @@ import gama.ui.devtools.util.Notifier;
  * <li>re-enables annotation processing and recreates the generated source folders;</li>
  * <li>cleans and fully rebuilds the whole workspace (except Maven-only projects like gama.parent) or only the
  * plugins;</li>
- * <li>verifies that every plugin got its {@code GamlAdditions} and reports the result in a notification.</li>
+ * <li>verifies that every plugin got its {@code GamlAdditions} and reports any problems.</li>
  * </ol>
  */
 public class CleanAndRebuildJob extends WorkspaceJob {
@@ -82,7 +82,6 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 	@Override
 	public IStatus runInWorkspace(final IProgressMonitor monitor) throws CoreException {
 		succeeded = false;
-		long start = System.currentTimeMillis();
 		SubMonitor sub = SubMonitor.convert(monitor, getName(), 100);
 		try {
 			sub.subTask("Removing missing project references");
@@ -132,7 +131,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 			int errors = countErrors(configs);
 			if (sub.isCanceled()) return Status.CANCEL_STATUS;
 			succeeded = !targets.isEmpty() && missing.isEmpty() && errors == 0;
-			report(missing, errors, (System.currentTimeMillis() - start) / 1000);
+			if (!succeeded) { reportProblems(missing, errors); }
 			return Status.OK_STATUS;
 		} catch (OperationCanceledException e) {
 			// Make sure annotation processing is not left disabled
@@ -162,19 +161,18 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 		return errors;
 	}
 
-	private void report(final List<String> missing, final int errors, final long seconds) {
+	private void reportProblems(final List<String> missing, final int errors) {
 		StringBuilder sb = new StringBuilder();
-		sb.append(targets.size()).append(" GAMA plugin(s) reset and rebuilt in ").append(seconds).append("s.");
-		if (missing.isEmpty()) {
-			sb.append("\nAll GAML additions have been generated.");
-		} else {
-			sb.append("\nGAML additions missing for: ").append(String.join(", ", missing))
+		if (!missing.isEmpty()) {
+			sb.append("GAML additions missing for: ").append(String.join(", ", missing))
 					.append(". Use 'Check GAMA Plugins Configuration'.");
 		}
-		if (targets.isEmpty()) { sb.append("\nNo open GAMA plugins were found."); }
-		if (errors > 0) { sb.append("\n").append(errors).append(" build error(s) remain."); }
-		Notifier.show(succeeded ? "GAMA build succeeded" : "GAMA build finished with problems",
-				sb.toString());
+		if (targets.isEmpty()) { sb.append("No open GAMA plugins were found."); }
+		if (errors > 0) {
+			if (!sb.isEmpty()) { sb.append('\n'); }
+			sb.append(errors).append(" build error(s) remain. See the Problems view.");
+		}
+		Notifier.show("GAMA build finished with problems", sb.toString());
 	}
 
 }
