@@ -44,6 +44,7 @@ public class CleanAndRebuildHandler extends AbstractHandler {
 		PlatformUI.getWorkbench().saveAllEditors(false);
 		CleanAndRebuildJob job = new CleanAndRebuildJob(targets, !selection);
 		var window = HandlerUtil.getActiveWorkbenchWindow(event);
+		job.setUser(true);
 		PlatformUI.getWorkbench().getProgressService().showInDialog(window == null ? null : window.getShell(), job);
 		job.schedule();
 		return null;
