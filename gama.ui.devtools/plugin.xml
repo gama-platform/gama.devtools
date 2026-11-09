@@ -6,7 +6,7 @@
    <extension point="org.eclipse.ui.commands">
       <category id="gama.ui.devtools.category" name="GAMA Developer Tools"/>
       <command id="gama.ui.devtools.install" categoryId="gama.ui.devtools.category" name="Install GAMA sources">
-         <commandParameter id="gama.ui.devtools.installKind" name="Installation (CORE, GRAPHICAL, COPILOT, COMMUNITY)" optional="false"/>
+         <commandParameter id="gama.ui.devtools.installKind" name="Installation (CORE, COMMUNITY)" optional="false"/>
       </command>
       <command id="gama.ui.devtools.gettingStarted" categoryId="gama.ui.devtools.category"
             name="Get started..." description="Checks Eclipse and the JDK, installs the GAMA sources, builds them and runs GAMA, step by step"/>
@@ -224,12 +224,6 @@
             <menu id="gama.ui.devtools.menu.install" label="Install GAMA sources">
                <command commandId="gama.ui.devtools.install" label="Install core plugins..." style="push">
                   <parameter name="gama.ui.devtools.installKind" value="CORE"/>
-               </command>
-               <command commandId="gama.ui.devtools.install" label="Install graphical editor..." style="push">
-                  <parameter name="gama.ui.devtools.installKind" value="GRAPHICAL"/>
-               </command>
-               <command commandId="gama.ui.devtools.install" label="Install Copilot integration..." style="push">
-                  <parameter name="gama.ui.devtools.installKind" value="COPILOT"/>
                </command>
                <command commandId="gama.ui.devtools.install" label="Install community plugins..." style="push">
                   <parameter name="gama.ui.devtools.installKind" value="COMMUNITY"/>

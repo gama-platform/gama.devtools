@@ -13,6 +13,9 @@ is needed for compiling and running GAMA; the guided setup below helps register 
 2. Add the update site `https://gama-platform.org/gama.devtools/`.
 3. Select **GAMA Developer Tools**, then restart Eclipse.
 
+Installing devtools does not install shared models or other GAMA extensions into Eclipse. The source
+installers below offer those projects for development in the workspace.
+
 **Recommended:** accept the startup prompt when the workspace has no `gama.core` project, or choose
 **GAMA > Get started...**.
 See [Getting started](#getting-started) for the guided and manual setup paths.
@@ -125,7 +128,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Update GAMA tools...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
 | **Report an issue...** | Opens `https://github.com/gama-platform/gama.devtools/issues/new` in the external web browser. Review and submit the issue on GitHub (sign-in may be required); nothing is submitted automatically. |
 | **Create GAMA artefacts > New GAMA Plugin / Skill / Operator / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
-| **Install GAMA sources > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
+| **Install GAMA sources > Install core plugins... / Install community plugins...** | Offers sources by category, checks out selected repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
 
 In **New GAMA Plugin**, the **Plugin id** is also the Eclipse project name. Use dot-separated ASCII
 Java identifiers, preferably lowercase (for example, `gama.extension.my_plugin`). Hyphens, spaces,
@@ -180,7 +183,7 @@ and each check explains how to fix a problem, with links.
    next page registers the selected JDK. Two options, selected by default, make it the workspace default
    JRE and associate it with the JavaSE-25 and JavaSE-21 execution environments. Eclipse keeps running
    on its own Java runtime. Downloading and installing the JDK itself remain manual.
-3. **Sources**: opens the core, graphical editor and community installers (see below), without starting
+3. **Sources**: opens the core and community installers (see below), without starting
    a build. The page is complete when every project required by the GUI launch exists and is open.
 4. **Build**: click **Clean and build now** to save the editors, refresh the workspace, repair plugin
    settings, regenerate the GAML additions, and clean and rebuild. The results include build errors,
@@ -219,7 +222,8 @@ The same setup can be performed without the guided wizard:
    in place. Include the product, features, required plugins, annotations, processor and grammar projects.
    Keep `gama.parent` imported but closed to avoid its Maven builder. The source installer can apply
    working sets and optional workspace preferences; it schedules a final build when used independently.
-   Graphical editor and community plugins are optional.
+   The core installer also offers shared models, the graphical editor and Copilot. These additional
+   repositories and community plugins are optional.
 4. Use the running Eclipse as the target platform and install missing dependencies. Run
    **GAMA > Clean GAMA plugins**, then **GAMA > Check workspace...** and resolve remaining Problems.
 5. Use **GAMA > Run GAMA > Configure...** to associate an existing GUI Eclipse Application configuration,
@@ -303,34 +307,46 @@ or notarized release; macOS security prompts may require explicitly allowing the
 
 ## Installing source projects
 
-The **Install GAMA sources** submenu provides four variants of the same wizard:
+The **Install GAMA sources** submenu and the **Get started...** wizard offer just two installers:
+**Install core plugins...** and **Install community plugins...**. Both group their choices using the
+GAMA category names in `categories.xml`, independently of the Eclipse workspace working sets.
 
-- **Core plugins** uses `https://github.com/gama-platform/gama.git`, branch `main`. It lists top-level
-  Eclipse projects, preselecting those listed in `gama.parent/pom.xml` plus `gama.parent`, including
-  `gama.export`, `gama.ui.export` and `gama.feature.export`. `gama.processor`, `gama.annotations` and
-  `gaml.grammar` are required and always imported (they cannot be deselected). Already imported projects
-  are not preselected.
-- **Graphical editor** uses `https://github.com/gama-platform-plugins/gama.graphical.modeling.git`,
-  branch `GAMA_2026-06`, with all its Eclipse projects preselected.
-- **Copilot integration** uses `https://github.com/gama-platform/gama.copilot.git`, branch `main`,
-  with its Eclipse projects preselected. This checks out the standalone integration sources, not
-  Microsoft's Copilot implementation. Its thin update site contains only the GAMA adapter and wrapper;
-  Microsoft's official p2 repository supplies Copilot dependencies. Explicit source-build inclusion
-  merges that dependency repository like any other source repository's p2 dependencies.
-- **Community plugins** discovers repositories in `https://github.com/gama-platform-plugins` and lists their
-  Eclipse project paths on `GAMA_2026-06`, including nested projects. Load the list, then explicitly select
-  projects; only repositories containing selected projects are checked out. Repositories without that branch
-  or without Eclipse projects are listed as unavailable, not silently switched to another branch.
+**Core plugins** automatically offers these repositories; only the base GAMA repository is checked
+initially. Select additional repositories or an entire category before choosing **Next**:
 
-Branches, HTTPS repository URLs and checkout directories are editable. Community installations use one
-subdirectory per repository; select a project row to edit its repository URL. Discovery uses GitHub's public
-API (with pagination); rate-limit and network errors are reported. Clone/fetch uses JGit, so a separate Git
-executable is not needed. Public HTTPS repositories work without authentication.
+| Category | Repository | Default branch |
+|---|---|---|
+| Core components | `https://github.com/gama-platform/gama.git` | `main` |
+| Model library | `https://github.com/gama-platform/gama.shared.models.git` | `main` |
+| Visualisation | `https://github.com/gama-platform-plugins/gama.graphical.modeling.git` | `GAMA_2026-06` |
+| AI, LLMs, ML | `https://github.com/gama-platform/gama.copilot.git` | `main` |
+
+For the base GAMA checkout, the project page preselects modules listed in `gama.parent/pom.xml` plus
+`gama.parent`, including the export projects. `gama.processor`, `gama.annotations` and `gaml.grammar`
+are required when that checkout is selected. Projects in additional selected repositories are
+preselected, including their feature/build projects; already imported projects are not selected again.
+The Copilot repository contains GAMA's integration sources, not Microsoft's implementation.
+
+**Community plugins** discovers repositories in `https://github.com/gama-platform-plugins` and lists
+their Eclipse projects on `GAMA_2026-06`, including nested projects. Its category groups come from
+`gama.category` in each project's POM, inheriting enclosing POM categories when absent; projects without
+category metadata appear under **Others**. Load the list, then select projects or categories explicitly.
+Only repositories containing selected projects are checked out. Repositories without the requested
+branch or Eclipse projects are listed as unavailable, not silently switched to another branch.
+
+The checkout parent directory is shared, with a separate subdirectory per repository by default.
+An existing base GAMA checkout is reused when it is under that parent. Select a repository or project
+row to edit and apply its HTTPS URL, branch and checkout directory. Selected repositories must have
+separate, non-nested directories. Changing the community branch requires reloading its catalog.
+Discovery uses GitHub's public API (with pagination); rate-limit and network errors are reported.
+Clone/fetch uses JGit, so a separate Git executable is not needed. Public HTTPS repositories work
+without authentication.
 
 **Next** clones a missing repository or fetches, checks out the selected branch and fast-forwards an existing
-clean checkout with a matching origin. It refuses dirty repositories, unfinished Git operations and branches
-with local commits: commit/stash or reconcile those yourself, or choose another directory. It never resets,
-stashes or overwrites local edits. Checkout happens before project selection and is retained on cancellation.
+clean checkout with a matching origin. If local changes exist, you can abort or explicitly authorize
+stashing them; unfinished Git operations and branches with local commits must be reconciled manually
+or installed in another directory. It never resets or overwrites local edits. Checkout happens before
+project selection and is retained on cancellation.
 Projects are imported in place and shared with EGit, not copied into the workspace. Already imported projects
 are shown but not selected, and duplicate project names across repositories must be resolved by selecting
 only one.
@@ -342,10 +358,15 @@ projects are ignored. Selected community projects
 that exist in the workspace are added to **==================== COMMUNITY**; it is populated dynamically rather
 than maintained as an obsolete fixed experimental-project list. An option displays working sets as roots in
 both Project Explorer and Package Explorer.
-Copilot integration projects use the same dynamic **COMMUNITY** working set.
+Shared-model bundles `gama.shared.models` and `gama.ui.shared.models` are added to the existing
+**==================== MODELS** working set, alongside `gama.library`. Copilot projects are added to
+**==================== EXTENSIONS**, not COMMUNITY; the graphical editor uses the existing
+**==================== GRAPHICAL MODELLING** working set. The core installer preselects these existing
+working sets, without renaming them. Feature and update-site projects are not members of MODELS.
 
-All non-core source installers offer **Include imported source features in GAMA launches and
-Maven/release builds**, unchecked by default. This adds the imported feature IDs to the GUI product
+Both installers offer **Include additional imported source features in GAMA launches and
+Maven/release builds**, unchecked by default and disabled when only base GAMA is selected. This applies
+only to the additional repositories, never the base GAMA checkout. It adds imported feature IDs to the GUI product
 and to the mapped feature-based GUI launch, and registers the source build in the GAMA reactor.
 An independent repository with a root POM is included as an aggregator: all its Maven modules are built
 with their existing parents and settings, rather than rewriting them to inherit from GAMA.

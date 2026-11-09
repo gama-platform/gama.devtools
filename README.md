@@ -7,6 +7,10 @@ prerequisite checks through source installation and building to running GAMA.
 
 Update site: `https://gama-platform.org/gama.devtools/` (in Eclipse, *Help > Install New Software...*).
 
+Installing **GAMA Developer Tools** does not install GAMA plugins into Eclipse. Use **GAMA > Install
+GAMA sources > Install core plugins...** to choose sources from GAMA, shared models, graphical modeling
+and Copilot, or **Install community plugins...** for community sources, organized by category.
+
 For GAMA development, use **Eclipse IDE for Java and DSL Developers 2026-03 or newer**, running on
 Java 21 or newer, with PDE installed. After installing these tools and restarting Eclipse, accept
 the setup prompt in a workspace without `gama.core`, or choose **GAMA > Get started...**. The wizard

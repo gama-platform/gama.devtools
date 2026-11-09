@@ -46,6 +46,7 @@
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.parent"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.processor"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.product"/>
+<project reference="1.0,https://github.com/gama-platform/gama.shared.models.git,main,gama.shared.models"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.application"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.devtools"/>
 <project reference="1.0,https://github.com/gama-platform-plugins/gama.graphical.modeling.git,GAMA_2026-06,gama.ui.diagram"/>
@@ -58,6 +59,7 @@
 <project reference="1.0,https://github.com/gama-platform-plugins/gama.graphical.modeling.git,GAMA_2026-06,gama.ui.feature.diagram"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.navigator"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.shared"/>
+<project reference="1.0,https://github.com/gama-platform/gama.shared.models.git,main,gama.ui.shared.models"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.viewers"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.workspace"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gaml.compiler"/>
@@ -81,7 +83,6 @@
 <item elementID="=gama.headless" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1708537903913_13" label="==================== DEPENDENCIES" name="==================== DEPENDENCIES">
-<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.copilot" type="4"/>
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.dependencies" type="4"/>
 <item elementID="=gama.dependencies" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.ui.dependencies" type="4"/>
@@ -96,6 +97,8 @@
 <item elementID="=gama.export" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1708537359891_6" label="==================== EXTENSIONS" name="==================== EXTENSIONS">
+<item elementID="=gama.ui.copilot" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.copilot" type="4"/>
 <item elementID="=gama.extension.traffic" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.rds" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.stats" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
@@ -136,6 +139,8 @@
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1708537812683_11" label="==================== MODELS" name="==================== MODELS">
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.library" type="4"/>
+<item elementID="=gama.shared.models" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
+<item elementID="=gama.ui.shared.models" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1708537458301_9" label="==================== UI" name="==================== UI">
 <item elementID="=gama.ui.display.opengl" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>

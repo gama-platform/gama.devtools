@@ -38,6 +38,7 @@ import org.xml.sax.InputSource;
 
 import gama.ui.devtools.GamaDevToolsActivator;
 import gama.ui.devtools.install.InstallModel.Project;
+import gama.ui.devtools.install.InstallModel.Kind;
 
 /**
  * Eclipse adapters for project import, additive working sets and bundled preference profiles.
@@ -79,7 +80,7 @@ public final class WorkspaceSetup {
 	}
 
 	public static List<IWorkingSet> workingSets(final Map<String, List<String>> definitions,
-			final Set<String> selected, final List<Project> communityProjects) throws Exception {
+			final Set<String> selected, final List<Project> sourceProjects, final Kind kind) throws Exception {
 		var manager = PlatformUI.getWorkbench().getWorkingSetManager();
 		var root = ResourcesPlugin.getWorkspace().getRoot();
 		List<IWorkingSet> result = new ArrayList<>();
@@ -87,10 +88,7 @@ public final class WorkspaceSetup {
 			Set<IAdaptable> elements = new LinkedHashSet<>();
 			IWorkingSet workingSet = manager.getWorkingSet(name);
 			if (workingSet != null) elements.addAll(Arrays.asList(workingSet.getElements()));
-			Set<String> projects = new LinkedHashSet<>(definitions.getOrDefault(name, List.of()));
-			if (InstallModel.COMMUNITY_SET.equals(name)) {
-				for (Project project : communityProjects) projects.add(project.name());
-			}
+			Set<String> projects = InstallModel.workingSetProjects(definitions, name, sourceProjects, kind);
 			for (String id : projects) {
 				IProject project = root.getProject(id);
 				if (!project.exists()) continue;

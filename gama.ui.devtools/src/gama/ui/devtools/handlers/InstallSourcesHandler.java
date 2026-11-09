@@ -9,7 +9,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import gama.ui.devtools.install.InstallModel.Kind;
 import gama.ui.devtools.wizards.InstallSourcesWizard;
 
-/** Opens the source installation wizard for one of the three repository families. */
+/** Opens the core or community source installation wizard. */
 public class InstallSourcesHandler extends AbstractHandler {
 
 	@Override

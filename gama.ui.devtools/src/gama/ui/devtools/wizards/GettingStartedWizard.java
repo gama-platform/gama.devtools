@@ -459,16 +459,14 @@ public class GettingStartedWizard extends Wizard {
 
 		SourcesPage() {
 			super("sources", "Install the GAMA sources",
-					"Clone github.com/gama-platform/gama and import its projects. Optionally add the graphical "
-							+ "editor and community plugins.");
+					"Choose categorized sources from GAMA, shared models, graphical modeling and Copilot in "
+							+ "Install core plugins, or browse community plugins.");
 		}
 
 		@Override
 		void createContents(final Composite parent) {
-			Composite actions = row(parent, 5);
+			Composite actions = row(parent, 3);
 			button(actions, "Install core plugins...", () -> install(Kind.CORE));
-			button(actions, "Install graphical editor...", () -> install(Kind.GRAPHICAL));
-			button(actions, "Install Copilot integration...", () -> install(Kind.COPILOT));
 			button(actions, "Install community plugins...", () -> install(Kind.COMMUNITY));
 			button(actions, "Check again", this::refresh);
 			note(parent, "The installers clone with Eclipse's built-in Git; a separate Git installation is not "

@@ -1,6 +1,7 @@
 package gama.ui.devtools.install;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -10,7 +11,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -41,7 +45,8 @@ public final class CommunityCatalog {
 				var repo = element.getAsJsonObject();
 				String name = repo.get("name").getAsString();
 				monitor.subTask("Listing " + name + " (" + branch + ")");
-				Repository repository = new Repository(name, repo.get("clone_url").getAsString(), branch);
+				Repository repository = new Repository(name, repo.get("clone_url").getAsString(), branch,
+						InstallModel.OTHER_CATEGORY);
 				JsonElement tree = request("/repos/gama-platform-plugins/" + name + "/git/trees/"
 						+ URLEncoder.encode(branch, StandardCharsets.UTF_8) + "?recursive=1", monitor);
 				if (tree == null) {
@@ -52,11 +57,22 @@ public final class CommunityCatalog {
 					throw new IOException("GitHub truncated the project list for " + name + ". Try that repository separately.");
 				}
 				int before = projects.size();
+				Map<String, String> poms = new LinkedHashMap<>();
+				Map<String, String> categories = new LinkedHashMap<>();
+				for (JsonElement entry : tree.getAsJsonObject().getAsJsonArray("tree")) {
+					var file = entry.getAsJsonObject();
+					String path = file.get("path").getAsString();
+					if (file.get("type").getAsString().equals("blob")
+							&& (path.equals("pom.xml") || path.endsWith("/pom.xml"))) {
+						poms.put(path, file.get("sha").getAsString());
+					}
+				}
 				for (JsonElement entry : tree.getAsJsonObject().getAsJsonArray("tree")) {
 					String path = entry.getAsJsonObject().get("path").getAsString();
 					if (path.equals(".project") || path.endsWith("/.project")) {
-						projects.add(new RemoteProject(repository,
-								path.equals(".project") ? "" : path.substring(0, path.length() - 9)));
+						String directory = path.equals(".project") ? "" : path.substring(0, path.length() - 9);
+						projects.add(new RemoteProject(repository, directory,
+								category(name, directory, poms, categories, monitor)));
 					}
 				}
 				if (before == projects.size()) unavailable.add(name + " (no Eclipse projects)");
@@ -65,6 +81,28 @@ public final class CommunityCatalog {
 		}
 		projects.sort(Comparator.comparing(RemoteProject::toString));
 		return new Catalog(List.copyOf(projects), List.copyOf(unavailable));
+	}
+
+	private String category(final String repository, final String directory, final Map<String, String> poms,
+			final Map<String, String> categories, final IProgressMonitor monitor) throws Exception {
+		if (categories.containsKey(directory)) return categories.get(directory);
+		int separator = directory.lastIndexOf('/');
+		String inherited = directory.isEmpty() ? InstallModel.OTHER_CATEGORY
+				: category(repository, separator < 0 ? "" : directory.substring(0, separator), poms, categories, monitor);
+		String sha = poms.get(directory.isEmpty() ? "pom.xml" : directory + "/pom.xml");
+		String category = inherited;
+		if (sha != null) {
+			var blob = request("/repos/gama-platform-plugins/" + repository + "/git/blobs/" + sha, monitor).getAsJsonObject();
+			if (!blob.get("encoding").getAsString().equals("base64")) {
+				throw new IOException("Unsupported GitHub encoding for " + repository + "/" + directory + "/pom.xml");
+			}
+			try (var input = new ByteArrayInputStream(
+					Base64.getMimeDecoder().decode(blob.get("content").getAsString()))) {
+				category = InstallModel.category(input, inherited);
+			}
+		}
+		categories.put(directory, category);
+		return category;
 	}
 
 	private JsonElement request(final String path, final IProgressMonitor monitor) throws Exception {

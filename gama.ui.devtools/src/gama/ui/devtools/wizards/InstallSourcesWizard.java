@@ -19,11 +19,14 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.CheckboxTableViewer;
+import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.ArrayContentProvider;
+import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
@@ -39,6 +42,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 
 import gama.ui.devtools.install.CommunityCatalog;
+import gama.ui.devtools.GamaDevToolsActivator;
 import gama.ui.devtools.install.InstallModel;
 import gama.ui.devtools.install.InstallModel.Kind;
 import gama.ui.devtools.install.InstallModel.Project;
@@ -61,6 +65,8 @@ public class InstallSourcesWizard extends Wizard {
 	private OptionsPage options;
 	private String prepared;
 	private Map<String, List<String>> definitions;
+	private Map<String, String> categories = Map.of();
+	private final Map<Repository, Path> checkouts = new LinkedHashMap<>();
 
 	private final boolean scheduleBuild;
 
@@ -86,9 +92,15 @@ public class InstallSourcesWizard extends Wizard {
 		addPage(options);
 		try (var input = WorkspaceSetup.resource(InstallModel.PROJECT_SETS)) {
 			definitions = InstallModel.workingSets(input);
+			var entry = Platform.getBundle(GamaDevToolsActivator.PLUGIN_ID).getEntry("categories.xml");
+			if (entry == null) throw new java.io.IOException("Missing bundled categories.xml");
+			try (var categoryInput = entry.openStream()) {
+				categories = InstallModel.categories(categoryInput);
+			}
 		} catch (Exception e) {
 			ResourceUtils.log(e);
-			source.setErrorMessage("Cannot read bundled working sets: " + e.getMessage());
+			definitions = null;
+			source.setErrorMessage("Cannot read bundled source installation settings: " + e.getMessage());
 			source.setPageComplete(false);
 		}
 	}
@@ -165,48 +177,46 @@ public class InstallSourcesWizard extends Wizard {
 		if (page == source) {
 			if (definitions == null) return null;
 			Path directory = Path.of(source.location.getText().strip()).toAbsolutePath().normalize();
-			String branch = source.branch.getText().strip();
-			String url = source.url == null ? "" : source.url.getText().strip();
-			List<RemoteProject> selected = source.catalog == null ? List.of()
-					: Arrays.stream(source.catalog.getCheckedElements()).map(RemoteProject.class::cast).toList();
-			String key = directory + "\n" + branch + "\n" + url + "\n"
-					+ selected.stream().map(p -> p.repository().toString() + ":" + p.path()).toList();
+			List<RemoteProject> selected = source.selectedProjects();
+			List<Repository> repositories = source.selectedRepositories();
+			String key = repositories.stream().map(repository -> repository + "\n"
+					+ source.checkout(repository, directory)).toList() + "\n" + selected;
 			if (!key.equals(prepared)) {
 				List<Project> available = new ArrayList<>();
+				Map<Repository, Path> locations = new LinkedHashMap<>();
 				if (!run(source, monitor -> {
-					if (kind == Kind.COMMUNITY) {
-						Map<Repository, Set<Path>> repositories = new LinkedHashMap<>();
-						for (RemoteProject project : selected) {
-							repositories.computeIfAbsent(project.repository(), r -> new LinkedHashSet<>())
-									.add(directory.resolve(project.repository().name()).resolve(project.path()).normalize());
+					available.clear();
+					locations.clear();
+					SubMonitor sub = SubMonitor.convert(monitor, "Checking out selected source repositories", repositories.size());
+					for (Repository repository : repositories) {
+						if (sub.isCanceled()) throw new OperationCanceledException();
+						Path checkout = source.checkout(repository, directory);
+						RepositoryCheckout.prepare(repository, checkout, sub.split(1));
+						List<Project> discovered = InstallModel.projects(checkout, repository, kind);
+						if (discovered.isEmpty()) {
+							throw new java.io.IOException("No Eclipse projects (.project files) found in " + checkout);
 						}
-						SubMonitor sub = SubMonitor.convert(monitor, "Checking out community projects", repositories.size());
-						for (var entry : repositories.entrySet()) {
-							if (sub.isCanceled()) throw new OperationCanceledException();
-							Path checkout = directory.resolve(entry.getKey().name());
-							RepositoryCheckout.prepare(entry.getKey(), checkout, sub.split(1));
-							for (Project project : InstallModel.projects(checkout, entry.getKey(), kind)) {
-								if (entry.getValue().contains(project.directory())) {
-									available.add(new Project(project.name(), project.directory(), project.repository(), true, false));
-								}
-							}
-							for (Path expected : entry.getValue()) {
-								if (available.stream().noneMatch(p -> p.directory().equals(expected))) {
-									throw new java.io.IOException("The selected project no longer exists: " + expected
-											+ ". Reload the GitHub project list.");
-								}
+						locations.put(repository, checkout);
+						if (kind == Kind.CORE) {
+							available.addAll(discovered);
+						} else {
+							for (RemoteProject remote : selected) {
+								if (!remote.repository().equals(repository)) continue;
+								Path expected = checkout.resolve(remote.path()).normalize();
+								Project project = discovered.stream().filter(p -> p.directory().equals(expected))
+										.findFirst().orElseThrow(() -> new java.io.IOException(
+												"The selected project no longer exists: " + expected + ". Reload the GitHub project list."));
+								available.add(new Project(project.name(), project.directory(), repository, true, false));
 							}
 						}
-					} else {
-						Repository repository = new Repository(kind.folder, url, branch);
-						RepositoryCheckout.prepare(repository, directory, monitor);
-						available.addAll(InstallModel.projects(directory, repository, kind));
 					}
 				})) return null;
 				if (available.isEmpty()) {
 					source.setErrorMessage("No Eclipse projects (.project files) found in the selected checkout.");
 					return null;
 				}
+				checkouts.clear();
+				checkouts.putAll(locations);
 				projects.setProjects(available);
 				prepared = key;
 			}
@@ -230,7 +240,6 @@ public class InstallSourcesWizard extends Wizard {
 		boolean eclipse = options.eclipse.getSelection(), cleanup = options.cleanup.getSelection(),
 				formatter = options.formatter.getSelection(), closeParent = options.closeParent.getSelection(),
 				includeBuild = options.includeBuild != null && options.includeBuild.getSelection();
-		Path sourceDirectory = Path.of(source.location.getText().strip()).toAbsolutePath().normalize();
 		Set<String> includedFeatures = new LinkedHashSet<>();
 		if (!run(options, monitor -> {
 			if (includeBuild) GamaLaunches.validateFeatureInclusion();
@@ -252,9 +261,10 @@ public class InstallSourcesWizard extends Wizard {
 					if (includeBuild) {
 						Map<Path, List<Project>> sources = new LinkedHashMap<>();
 						for (Project project : projects.available) {
+							if (kind == Kind.CORE && project.repository().isBase()) continue;
 							if (!selected.contains(project)
 									&& !ResourcesPlugin.getWorkspace().getRoot().getProject(project.name()).exists()) continue;
-							Path checkout = kind == Kind.COMMUNITY ? sourceDirectory.resolve(project.repository().name()) : sourceDirectory;
+							Path checkout = checkouts.get(project.repository());
 							sources.computeIfAbsent(checkout, key -> new ArrayList<>()).add(project);
 						}
 						includedFeatures.addAll(GamaBuildIntegration.includeSources(sources, sub.newChild(0)));
@@ -274,8 +284,7 @@ public class InstallSourcesWizard extends Wizard {
 		})) return false;
 		try {
 			if (!includedFeatures.isEmpty()) GamaLaunches.includeFeatures(includedFeatures);
-			List<Project> community = kind == Kind.COMMUNITY || kind == Kind.COPILOT ? projects.available : List.of();
-			var workingSets = WorkspaceSetup.workingSets(definitions, sets, community);
+			var workingSets = WorkspaceSetup.workingSets(definitions, sets, projects.available, kind);
 			if (options.sets.getSelection() && options.explorers.getSelection() && !workingSets.isEmpty()) {
 				WorkspaceSetup.organizeExplorers(workingSets);
 			}
@@ -314,15 +323,18 @@ public class InstallSourcesWizard extends Wizard {
 	}
 
 	private final class SourcePage extends WizardPage {
-		Text url, branch, location;
-		CheckboxTableViewer catalog;
+		Text branch, location, repositoryUrl, repositoryBranch, repositoryLocation;
+		CheckboxTreeViewer catalog;
 		Label skipped;
+		final Map<String, List<Object>> groups = new LinkedHashMap<>();
+		final Map<String, Path> customLocations = new LinkedHashMap<>();
+		List<Object> entries = new ArrayList<>();
 
 		SourcePage() {
 			super("repositories");
 			setTitle("Install " + kind.label);
-			setDescription("Choose a checkout location and branch. Next clones or fast-forwards repositories. "
-					+ "If an existing repository has local changes, you can stash them before continuing.");
+			setDescription("Choose source repositories by category. Next checks out only your selections; "
+					+ "nothing is installed into the running Eclipse.");
 			setPageComplete(false);
 		}
 
@@ -335,9 +347,8 @@ public class InstallSourcesWizard extends Wizard {
 		@Override
 		public void createControl(final Composite parent) {
 			Composite body = body(parent, 3);
-			if (kind != Kind.COMMUNITY) url = text(body, "Repository URL:", kind.url);
-			branch = text(body, "Branch:", kind.branch);
-			label(body, kind == Kind.COMMUNITY ? "Checkout parent directory:" : "Repository directory:");
+			if (kind == Kind.COMMUNITY) branch = text(body, "Community branch:", InstallModel.COMMUNITY_BRANCH);
+			label(body, "Checkout parent directory:");
 			location = new Text(body, SWT.BORDER);
 			location.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 			location.setText(defaultLocation());
@@ -349,59 +360,77 @@ public class InstallSourcesWizard extends Wizard {
 				String path = dialog.open();
 				if (path != null) location.setText(path);
 			});
+			note(body, kind == Kind.CORE
+					? "GAMA sources are selected by default. Shared models, graphical modeling and Copilot are "
+							+ "offered here automatically; select the additional repositories you want."
+					: "Projects from https://github.com/gama-platform-plugins, grouped by their GAMA categories. "
+							+ "Projects without category metadata appear under Others.");
 			if (kind == Kind.COMMUNITY) {
-				note(body, "Projects from https://github.com/gama-platform-plugins.\n"
-						+ "Select projects to check out. Only their repositories will be cloned.");
 				Button load = check(body, "Load / reload GitHub projects", false, SWT.PUSH);
 				load.addListener(SWT.Selection, e -> load());
-				catalog = table(body);
-				catalog.addCheckStateListener(e -> validate());
-				selectButtons(body, catalog, this::validate);
-				Text repositoryUrl = text(body, "Selected repository URL:", "");
-				catalog.addSelectionChangedListener(e -> {
-					Object selected = e.getStructuredSelection().getFirstElement();
-					repositoryUrl.setText(selected instanceof RemoteProject project ? project.repository().url() : "");
-				});
-				Button applyUrl = check(body, "Use this URL for the selected repository", false, SWT.PUSH);
-				applyUrl.addListener(SWT.Selection, e -> {
-					Object selection = catalog.getStructuredSelection().getFirstElement();
-					if (!(selection instanceof RemoteProject project)) return;
-					try {
-						String newUrl = repositoryUrl.getText().strip();
-						var uri = new org.eclipse.jgit.transport.URIish(newUrl);
-						if (!"https".equals(uri.getScheme()) || uri.getHost() == null) {
-							setErrorMessage("Use an HTTPS Git repository URL.");
-							return;
-						}
-						Set<Object> checked = new LinkedHashSet<>(Arrays.asList(catalog.getCheckedElements()));
-						List<RemoteProject> updated = new ArrayList<>(), selectedProjects = new ArrayList<>();
-						for (int i = 0; i < catalog.getTable().getItemCount(); i++) {
-							RemoteProject old = (RemoteProject) catalog.getElementAt(i);
-							RemoteProject replacement = old.repository().equals(project.repository())
-									? new RemoteProject(new Repository(old.repository().name(), newUrl, old.repository().branch()),
-											old.path()) : old;
-							updated.add(replacement);
-							if (checked.contains(old)) selectedProjects.add(replacement);
-						}
-						catalog.setInput(updated);
-						catalog.setCheckedElements(selectedProjects.toArray());
-						validate();
-					} catch (java.net.URISyntaxException exception) {
-						setErrorMessage(exception.getMessage());
-					}
-				});
-				skipped = note(body, "");
-				branch.addModifyListener(e -> {
-					catalog.setInput(List.of());
-					skipped.setText("Branch changed: reload the GitHub project list.");
+			}
+			catalog = new CheckboxTreeViewer(body, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+			GridData data = new GridData(SWT.FILL, SWT.FILL, true, true, 3, 1);
+			data.heightHint = 240;
+			data.widthHint = 650;
+			catalog.getControl().setLayoutData(data);
+			catalog.setContentProvider(new ITreeContentProvider() {
+				@Override public Object[] getElements(final Object input) { return groups.keySet().toArray(); }
+				@Override public Object[] getChildren(final Object parent) {
+					return parent instanceof String id ? groups.getOrDefault(id, List.of()).toArray() : new Object[0];
+				}
+				@Override public Object getParent(final Object element) {
+					return element instanceof String ? null : category(element);
+				}
+				@Override public boolean hasChildren(final Object element) {
+					return element instanceof String id && groups.containsKey(id);
+				}
+			});
+			catalog.setLabelProvider(new LabelProvider() {
+				@Override public String getText(final Object element) {
+					if (element instanceof String id) return categories.getOrDefault(id, id);
+					if (element instanceof Repository repository) return repository.name() + " (" + repository.branch() + ")";
+					return element.toString();
+				}
+			});
+			catalog.addCheckStateListener(e -> {
+				if (e.getElement() instanceof String) catalog.setSubtreeChecked(e.getElement(), e.getChecked());
+				updateChecks();
+				validate();
+			});
+			Composite buttons = body(body, 2);
+			buttons.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 3, 1));
+			for (boolean selected : new boolean[] { true, false }) {
+				Button button = new Button(buttons, SWT.PUSH);
+				button.setText(selected ? "Select all" : "Deselect all");
+				button.addListener(SWT.Selection, e -> {
+					catalog.setCheckedElements(selected ? entries.toArray() : new Object[0]);
+					updateChecks();
 					validate();
 				});
 			}
+			repositoryUrl = text(body, "Selected repository URL:", "");
+			repositoryBranch = text(body, "Selected repository branch:", "");
+			repositoryLocation = text(body, "Selected checkout directory:", "");
+			catalog.addSelectionChangedListener(e -> showRepository());
+			Button apply = check(body, "Apply settings to the selected repository", false, SWT.PUSH);
+			apply.addListener(SWT.Selection, e -> applyRepository());
+			skipped = note(body, "");
+			if (kind == Kind.COMMUNITY) {
+				branch.addModifyListener(e -> {
+					setEntries(List.of(), Set.of());
+					skipped.setText("Branch changed: reload the GitHub project list.");
+					validate();
+				});
+			} else {
+				setEntries(InstallModel.CORE_REPOSITORIES, Set.of(InstallModel.CORE_REPOSITORIES.get(0)));
+			}
 			note(body, "Checkout happens on Next and is kept even if you cancel the wizard. "
 					+ "Dirty or diverged repositories must be updated manually or installed in another directory.");
-			location.addModifyListener(e -> validate());
-			branch.addModifyListener(e -> validate());
-			if (url != null) url.addModifyListener(e -> validate());
+			location.addModifyListener(e -> {
+				showRepository();
+				validate();
+			});
 			setControl(body);
 			validate();
 		}
@@ -415,7 +444,7 @@ public class InstallSourcesWizard extends Wizard {
 			CommunityCatalog.Catalog[] result = new CommunityCatalog.Catalog[1];
 			if (run(this, monitor -> result[0] = new CommunityCatalog().load(ref, monitor))) {
 				prepared = null;
-				catalog.setInput(result[0].projects());
+				setEntries(result[0].projects(), Set.of());
 				skipped.setText(result[0].unavailable().isEmpty() ? ""
 						: "Not offered: " + String.join(", ", result[0].unavailable()));
 				skipped.getParent().layout(true, true);
@@ -429,22 +458,133 @@ public class InstallSourcesWizard extends Wizard {
 			Path parent = root.getLocation().toFile().toPath().getParent().resolve("git");
 			if (core.exists() && core.getLocation() != null) {
 				Path gama = core.getLocation().toFile().toPath().getParent();
-				if (kind == Kind.CORE) return gama.toString();
 				parent = gama.getParent();
 			}
-			return (kind == Kind.COMMUNITY ? parent : parent.resolve(kind.folder)).toString();
+			return parent.toString();
+		}
+
+		private Repository repository(final Object element) {
+			return element instanceof Repository repository ? repository
+					: element instanceof RemoteProject project ? project.repository() : null;
+		}
+
+		private String category(final Object element) {
+			return element instanceof RemoteProject project ? project.category() : ((Repository) element).category();
+		}
+
+		private void setEntries(final List<?> items, final Set<?> checked) {
+			entries = new ArrayList<>(items);
+			groups.clear();
+			for (String id : categories.keySet()) {
+				for (Object item : entries) {
+					if (id.equals(category(item))) groups.computeIfAbsent(id, key -> new ArrayList<>()).add(item);
+				}
+			}
+			for (Object item : entries) {
+				if (!categories.containsKey(category(item))) {
+					groups.computeIfAbsent(category(item), key -> new ArrayList<>()).add(item);
+				}
+			}
+			catalog.setInput(entries);
+			catalog.setCheckedElements(checked.toArray());
+			catalog.expandAll();
+			updateChecks();
+			showRepository();
+		}
+
+		private void updateChecks() {
+			for (var group : groups.entrySet()) {
+				long checked = group.getValue().stream().filter(catalog::getChecked).count();
+				catalog.setChecked(group.getKey(), checked > 0);
+				catalog.setGrayed(group.getKey(), checked > 0 && checked < group.getValue().size());
+			}
+		}
+
+		List<RemoteProject> selectedProjects() {
+			return Arrays.stream(catalog.getCheckedElements()).filter(RemoteProject.class::isInstance)
+					.map(RemoteProject.class::cast).toList();
+		}
+
+		List<Repository> selectedRepositories() {
+			return Arrays.stream(catalog.getCheckedElements()).map(this::repository).filter(java.util.Objects::nonNull)
+					.distinct().toList();
+		}
+
+		Path checkout(final Repository repository, final Path parent) {
+			if (customLocations.containsKey(repository.name())) return customLocations.get(repository.name());
+			var core = ResourcesPlugin.getWorkspace().getRoot().getProject("gama.core");
+			if (repository.isBase() && core.exists() && core.getLocation() != null) {
+				Path existing = core.getLocation().toFile().toPath().getParent().toAbsolutePath().normalize();
+				if (parent.equals(existing.getParent())) return existing;
+			}
+			return parent.resolve(repository.name());
+		}
+
+		private void showRepository() {
+			Repository repository = repository(catalog.getStructuredSelection().getFirstElement());
+			repositoryUrl.setText(repository == null ? "" : repository.url());
+			repositoryBranch.setText(repository == null ? "" : repository.branch());
+			if (repository == null || location.getText().isBlank()) {
+				repositoryLocation.setText("");
+				return;
+			}
+			try {
+				repositoryLocation.setText(checkout(repository, Path.of(location.getText().strip())
+						.toAbsolutePath().normalize()).toString());
+			} catch (java.nio.file.InvalidPathException e) {
+				repositoryLocation.setText("");
+			}
+		}
+
+		private void applyRepository() {
+			Repository old = repository(catalog.getStructuredSelection().getFirstElement());
+			if (old == null) return;
+			try {
+				String url = repositoryUrl.getText().strip(), ref = repositoryBranch.getText().strip();
+				var uri = new org.eclipse.jgit.transport.URIish(url);
+				if (!"https".equals(uri.getScheme()) || uri.getHost() == null) {
+					setErrorMessage("Use an HTTPS Git repository URL.");
+					return;
+				}
+				if (!org.eclipse.jgit.lib.Repository.isValidRefName("refs/heads/" + ref)) {
+					setErrorMessage("Enter a valid Git branch name.");
+					return;
+				}
+				Path directory = Path.of(repositoryLocation.getText().strip()).normalize();
+				if (!directory.isAbsolute()) {
+					setErrorMessage("Choose an absolute checkout directory.");
+					return;
+				}
+				Repository replacement = new Repository(old.name(), url, ref, old.category());
+				Set<Object> checked = new LinkedHashSet<>();
+				List<Object> updated = new ArrayList<>();
+				for (Object item : entries) {
+					Object next = item;
+					if (old.equals(repository(item))) {
+						next = item instanceof RemoteProject project
+								? new RemoteProject(replacement, project.path(), project.category()) : replacement;
+					}
+					updated.add(next);
+					if (catalog.getChecked(item)) checked.add(next);
+				}
+				customLocations.put(old.name(), directory);
+				setEntries(updated, checked);
+				prepared = null;
+				validate();
+			} catch (java.net.URISyntaxException | java.nio.file.InvalidPathException e) {
+				setErrorMessage(e.getMessage());
+			}
 		}
 
 		private void validate() {
 			setErrorMessage(null);
 			setPageComplete(false);
 			if (definitions == null) {
-				setErrorMessage("Bundled working sets could not be loaded. See the Error Log.");
+				setErrorMessage("Bundled installation settings could not be loaded. See the Error Log.");
 				return;
 			}
-			if (branch.getText().isBlank() || location.getText().isBlank()
-					|| url != null && url.getText().isBlank()) return;
-			if (!org.eclipse.jgit.lib.Repository.isValidRefName("refs/heads/" + branch.getText().strip())) {
+			if (location.getText().isBlank()) return;
+			if (branch != null && !org.eclipse.jgit.lib.Repository.isValidRefName("refs/heads/" + branch.getText().strip())) {
 				setErrorMessage("Enter a valid Git branch name.");
 				return;
 			}
@@ -458,18 +598,24 @@ public class InstallSourcesWizard extends Wizard {
 					setErrorMessage("The checkout location is not a directory.");
 					return;
 				}
-				if (url != null) {
-					var uri = new org.eclipse.jgit.transport.URIish(url.getText().strip());
-					if (uri.getHost() == null || !"https".equals(uri.getScheme())) {
-						setErrorMessage("Use an HTTPS Git repository URL.");
+				List<Path> used = new ArrayList<>();
+				for (Repository repository : selectedRepositories()) {
+					Path path = checkout(repository, directory.normalize());
+					if (Files.exists(path) && !Files.isDirectory(path)) {
+						setErrorMessage("The checkout location is not a directory: " + path);
 						return;
 					}
+					if (used.stream().anyMatch(other -> path.startsWith(other) || other.startsWith(path))) {
+						setErrorMessage("Selected repositories need separate, non-nested checkout directories.");
+						return;
+					}
+					used.add(path);
 				}
-			} catch (java.nio.file.InvalidPathException | java.net.URISyntaxException e) {
+			} catch (java.nio.file.InvalidPathException e) {
 				setErrorMessage(e.getMessage());
 				return;
 			}
-			setPageComplete(catalog == null || catalog.getCheckedElements().length > 0);
+			setPageComplete(!selectedRepositories().isEmpty());
 		}
 	}
 
@@ -481,7 +627,7 @@ public class InstallSourcesWizard extends Wizard {
 			super("projects");
 			setTitle("Import projects");
 			setDescription("Choose projects to import. Existing workspace projects cannot be selected. "
-					+ "Core Maven modules, graphical editor and Copilot integration projects are preselected; "
+					+ "Core Maven modules and projects from the selected additional core repositories are preselected; "
 					+ String.join(" and ", InstallModel.REQUIRED_CORE_PROJECTS.stream().sorted().toList())
 					+ " are always imported.");
 		}
@@ -563,7 +709,13 @@ public class InstallSourcesWizard extends Wizard {
 
 		@Override
 		public void setVisible(final boolean visible) {
-			if (visible && workingSets != null) workingSets.refresh();
+			if (visible && workingSets != null) {
+				workingSets.refresh();
+				boolean optional = projects.available.stream()
+						.anyMatch(project -> kind == Kind.COMMUNITY || !project.repository().isBase());
+				includeBuild.setEnabled(optional);
+				if (!optional) includeBuild.setSelection(false);
+			}
 			super.setVisible(visible);
 		}
 
@@ -578,20 +730,16 @@ public class InstallSourcesWizard extends Wizard {
 					String name = (String) element;
 					Set<String> imports = new LinkedHashSet<>();
 					for (Object item : projects.viewer.getCheckedElements()) imports.add(((Project) item).name());
-					long present = availableDefinitions.get(name).stream()
+					long present = InstallModel.workingSetProjects(availableDefinitions, name, projects.available, kind).stream()
 							.filter(p -> ResourcesPlugin.getWorkspace().getRoot().getProject(p).exists()
 									|| imports.contains(p)).count();
-					if (InstallModel.COMMUNITY_SET.equals(name) && (kind == Kind.COMMUNITY || kind == Kind.COPILOT)) {
-						present = projects.available.stream().filter(p -> projects.exists(p) || imports.contains(p.name())).count();
-					}
 					return name + " (" + present + " available; missing projects are ignored)";
 				}
 			});
 			workingSets.setInput(new ArrayList<>(availableDefinitions.keySet()));
 			workingSets.setCheckedElements(availableDefinitions.keySet().stream().filter(name -> switch (kind) {
-				case CORE -> !name.endsWith("COMMUNITY") && !name.endsWith("GRAPHICAL MODELLING");
-				case GRAPHICAL -> name.endsWith("GRAPHICAL MODELLING");
-				case COMMUNITY, COPILOT -> name.equals(InstallModel.COMMUNITY_SET);
+				case CORE -> !name.equals(InstallModel.COMMUNITY_SET);
+				case COMMUNITY -> name.equals(InstallModel.COMMUNITY_SET);
 			}).toArray());
 			explorers = check(body, "Show working sets as roots in Project Explorer and Package Explorer", true, SWT.CHECK);
 			sets.addListener(SWT.Selection, e -> {
@@ -607,14 +755,13 @@ public class InstallSourcesWizard extends Wizard {
 			note(body, "The Eclipse preference export includes Java compiler, formatter and cleanup settings. "
 					+ "Project-specific settings still take precedence. No source files are formatted or cleaned up.");
 			closeParent = check(body, "Turn off Maven compilation by closing gama.parent (recommended)", true, SWT.CHECK);
-			if (kind != Kind.CORE) {
-				includeBuild = check(body, "Include imported source features in GAMA launches and Maven/release builds",
-						false, SWT.CHECK);
-				note(body, "This updates the GUI product, the mapped feature-based GUI launch and the GAMA Maven reactor. "
-						+ "Standalone repositories are built with their own Maven parents and modules; their p2 repositories "
-						+ "are made available to GAMA. Resolve their dependencies in Eclipse's target platform separately. "
-						+ "For a plugin without a feature, use its GAMA > Add to GAMA build... context menu.");
-			}
+			includeBuild = check(body, "Include additional imported source features in GAMA launches and Maven/release builds",
+					false, SWT.CHECK);
+			note(body, "This applies to additional repositories, not the base GAMA checkout. It updates the GUI product, "
+					+ "the mapped feature-based GUI launch and the GAMA Maven reactor. Standalone repositories keep "
+					+ "their own Maven parents and modules; their p2 repositories are made available to GAMA. Resolve "
+					+ "their dependencies in Eclipse's target platform separately. For a plugin without a feature, "
+					+ "use its GAMA > Add to GAMA build... context menu.");
 			note(body, scheduleBuild ? "Finish saves editors, imports projects, applies your choices and schedules a refresh, "
 					+ "clean build and full build of the whole workspace. Resolve the GAMA target platform "
 					+ "and configure the required JDK separately if needed."
