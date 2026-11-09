@@ -127,6 +127,15 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Create GAMA artefacts > New GAMA Plugin / Skill / Operator / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
 | **Install GAMA sources > Install core plugins... / Install graphical editor... / Install community plugins...** | Checks out source repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
 
+In **New GAMA Plugin**, the **Plugin id** is also the Eclipse project name. Use dot-separated ASCII
+Java identifiers, preferably lowercase (for example, `gama.extension.my_plugin`). Hyphens, spaces,
+empty segments, segments starting with digits, Java keywords, reserved literals and a lone `_`
+are rejected. Non-ASCII names are rejected because the annotation processor derives its package
+name from the URI-encoded project name. The final segment must be unique among workspace GAMA
+plugins: it determines `gaml.additions.<segment>.GamlAdditions`. The wizard explains naming errors
+and disables **Finish** until they are corrected; uppercase package names produce a non-blocking
+convention warning.
+
 The **Clean GAMA plugins** shortcut takes precedence over Eclipse's standard Build All binding in the default
 key scheme. It always targets all GAMA plugins, regardless of selection. Explicit user bindings and more
 specific editor bindings can still override it; configure these in *Preferences > General > Keys*.

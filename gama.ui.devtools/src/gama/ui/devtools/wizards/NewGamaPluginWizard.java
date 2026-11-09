@@ -22,6 +22,7 @@ import org.eclipse.core.resources.ICommand;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -325,6 +326,15 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 			c.setLayout(new GridLayout(3, false));
 			String prefix = DevToolsPreferences.get(DevToolsPreferences.DEFAULT_PREFIX);
 			id = text(c, "Plugin id:", prefix);
+			id.setToolTipText("Also the Eclipse project name; its final segment names the GamlAdditions package.");
+			Label namingHint = new Label(c, SWT.WRAP);
+			namingHint.setText("The plugin ID is also the project name. Use dot-separated ASCII Java identifiers "
+					+ "(lowercase recommended), e.g. gama.extension.my_plugin.\n"
+					+ "No hyphens or spaces; segments cannot start with digits or be Java keywords. "
+					+ "The final segment names gaml.additions.<segment> and must be unique among GAMA plugins.");
+			GridData hintData = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
+			hintData.widthHint = 500;
+			namingHint.setLayoutData(hintData);
 			name = text(c, "Name:", "");
 			vendor = text(c, "Vendor:", DevToolsPreferences.get(DevToolsPreferences.DEFAULT_VENDOR));
 			pkg = text(c, "Base package:", prefix);
@@ -426,29 +436,49 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 
 		private void validate() {
 			setErrorMessage(null);
+			setMessage(null);
 			setPageComplete(false);
 			if (categoryError != null) {
 				setErrorMessage(categoryError);
 				return;
 			}
 			String i = id.getText().strip();
-			IStatus s = JavaConventions.validatePackageName(i, JavaCore.VERSION_21, JavaCore.VERSION_21);
-			if (s.getSeverity() == IStatus.ERROR) {
-				setErrorMessage("Plugin id: " + s.getMessage());
+			if (i.isEmpty()) {
+				setErrorMessage("Enter the plugin ID (also the Eclipse project name)");
 				return;
 			}
-			if (i.endsWith(".")) {
-				setErrorMessage("Enter the plugin id");
+			if (i.chars().anyMatch(ch -> ch > 127 || Character.isWhitespace(ch))) {
+				setErrorMessage("Plugin ID/project name: use ASCII identifiers without spaces. "
+						+ "The processor derives the GamlAdditions package from the URI-encoded project name.");
+				return;
+			}
+			String shortcut = GamaProjects.shortcut(i);
+			IStatus s = JavaConventions.validatePackageName(shortcut, JavaCore.VERSION_21, JavaCore.VERSION_21);
+			if (s.getSeverity() == IStatus.ERROR) {
+				setErrorMessage("Cannot generate GamlAdditions: the final project-name segment '" + shortcut
+						+ "' is not a valid Java package identifier. " + s.getMessage()
+						+ " Use a name such as gama.extension.my_plugin.");
+				return;
+			}
+			IStatus idStatus = JavaConventions.validatePackageName(i, JavaCore.VERSION_21, JavaCore.VERSION_21);
+			if (idStatus.getSeverity() == IStatus.ERROR) {
+				setErrorMessage("Plugin ID/project name: use dot-separated Java identifiers with no empty segments. "
+						+ idStatus.getMessage());
+				return;
+			}
+			s = ResourcesPlugin.getWorkspace().validateName(i, IResource.PROJECT);
+			if (s.getSeverity() == IStatus.ERROR) {
+				setErrorMessage("Plugin ID/project name: " + s.getMessage());
 				return;
 			}
 			if (GamaProjects.root().getProject(i).exists()) {
 				setErrorMessage("A project named " + i + " already exists");
 				return;
 			}
-			String shortcut = GamaProjects.shortcut(i);
 			if (existingShortcuts.contains(shortcut)) {
-				setErrorMessage("Another GAMA plugin already ends with '." + shortcut
-						+ "': the generated additions would collide (gaml.additions." + shortcut + ")");
+				setErrorMessage("Another GAMA plugin already uses the final project-name segment '" + shortcut
+						+ "': their generated gaml.additions." + shortcut
+						+ ".GamlAdditions classes would collide. Choose a different final segment.");
 				return;
 			}
 			s = JavaConventions.validatePackageName(pkg.getText().strip(), JavaCore.VERSION_21, JavaCore.VERSION_21);
@@ -476,6 +506,9 @@ public class NewGamaPluginWizard extends Wizard implements INewWizard {
 			if (new File(l.toFile(), i).exists()) {
 				setErrorMessage(l.append(i).toOSString() + " already exists");
 				return;
+			}
+			if (idStatus.getSeverity() == IStatus.WARNING) {
+				setMessage("Plugin ID/project name: " + idStatus.getMessage(), WARNING);
 			}
 			setPageComplete(true);
 		}
