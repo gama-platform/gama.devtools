@@ -1,0 +1,75 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<units size='2'>
+  <unit id='gama.feature.devtools.feature.jar' version='0.0.0.202611061543'>
+    <properties size='8'>
+      <property name='org.eclipse.equinox.p2.name' value='GAMA Developer Tools'/>
+      <property name='org.eclipse.equinox.p2.description' value='Tools for the developers of GAMA, available in a &quot;GAMA&quot; menu of the Eclipse IDE: &quot;Get started...&quot;&#xA;      guides prerequisite checks, JDK 25 configuration, source installation, building and launching;&#xA;      wizards for new GAMA&#xA;      plugins (standard layout, annotation processor configured, integration in the build), skills, operators,&#xA;      actions, types and test models; &quot;Clean GAMA plugins&quot; resets the annotation processor and rebuilds;&#xA;      a configuration checker with quick fixes; a report of undocumented and untested GAML elements; the rebuild&#xA;      of the processor jar, a package dependency graph and native local releases without installing Maven.'/>
+      <property name='org.eclipse.equinox.p2.description.url' value='https://gama-platform.org'/>
+      <property name='org.eclipse.equinox.p2.provider' value='UMMISCO'/>
+      <property name='maven-groupId' value='org.gama'/>
+      <property name='maven-artifactId' value='gama.feature.devtools'/>
+      <property name='maven-version' value='0.0.0-SNAPSHOT'/>
+      <property name='maven-type' value='eclipse-feature'/>
+    </properties>
+    <provides size='3'>
+      <provided namespace='org.eclipse.equinox.p2.iu' name='gama.feature.devtools.feature.jar' version='0.0.0.202611061543'/>
+      <provided namespace='org.eclipse.equinox.p2.eclipse.type' name='feature' version='1.0.0'/>
+      <provided namespace='org.eclipse.update.feature' name='gama.feature.devtools' version='0.0.0.202611061543'/>
+    </provides>
+    <filter>
+      (org.eclipse.update.install.features=true)
+    </filter>
+    <artifacts size='1'>
+      <artifact classifier='org.eclipse.update.feature' id='gama.feature.devtools' version='0.0.0.202611061543'/>
+    </artifacts>
+    <touchpoint id='org.eclipse.equinox.p2.osgi' version='1.0.0'/>
+    <touchpointData size='1'>
+      <instructions size='1'>
+        <instruction key='zipped'>
+          true
+        </instruction>
+      </instructions>
+    </touchpointData>
+    <licenses size='1'>
+      <license uri='https://github.com/gama-platform/gama/blob/main/LICENSE' url='https://github.com/gama-platform/gama/blob/main/LICENSE'>
+        GNU General Public License v3.0 or later.&#xA;      See https://github.com/gama-platform/gama/blob/main/LICENSE for the full text.
+      </license>
+    </licenses>
+    <copyright>
+      (c) 2007-2026 UMI 209 UMMISCO IRD/SU &amp; Partners (IRIT, MIAT, ESPACE-DEV, CTU)
+    </copyright>
+  </unit>
+  <unit id='gama.feature.devtools.feature.group' version='0.0.0.202611061543' singleton='false'>
+    <update id='gama.feature.devtools.feature.group' range='[0.0.0,0.0.0.202611061543)' severity='0'/>
+    <properties size='9'>
+      <property name='org.eclipse.equinox.p2.name' value='GAMA Developer Tools'/>
+      <property name='org.eclipse.equinox.p2.description' value='Tools for the developers of GAMA, available in a &quot;GAMA&quot; menu of the Eclipse IDE: &quot;Get started...&quot;&#xA;      guides prerequisite checks, JDK 25 configuration, source installation, building and launching;&#xA;      wizards for new GAMA&#xA;      plugins (standard layout, annotation processor configured, integration in the build), skills, operators,&#xA;      actions, types and test models; &quot;Clean GAMA plugins&quot; resets the annotation processor and rebuilds;&#xA;      a configuration checker with quick fixes; a report of undocumented and untested GAML elements; the rebuild&#xA;      of the processor jar, a package dependency graph and native local releases without installing Maven.'/>
+      <property name='org.eclipse.equinox.p2.description.url' value='https://gama-platform.org'/>
+      <property name='org.eclipse.equinox.p2.provider' value='UMMISCO'/>
+      <property name='org.eclipse.equinox.p2.type.group' value='true'/>
+      <property name='maven-groupId' value='org.gama'/>
+      <property name='maven-artifactId' value='gama.feature.devtools'/>
+      <property name='maven-version' value='0.0.0-SNAPSHOT'/>
+      <property name='maven-type' value='eclipse-feature'/>
+    </properties>
+    <provides size='1'>
+      <provided namespace='org.eclipse.equinox.p2.iu' name='gama.feature.devtools.feature.group' version='0.0.0.202611061543'/>
+    </provides>
+    <requires size='2'>
+      <required namespace='org.eclipse.equinox.p2.iu' name='gama.ui.devtools' range='[0.0.0.202611061543,0.0.0.202611061543]'/>
+      <required namespace='org.eclipse.equinox.p2.iu' name='gama.feature.devtools.feature.jar' range='[0.0.0.202611061543,0.0.0.202611061543]'>
+        <filter>
+          (org.eclipse.update.install.features=true)
+        </filter>
+      </required>
+    </requires>
+    <licenses size='1'>
+      <license uri='https://github.com/gama-platform/gama/blob/main/LICENSE' url='https://github.com/gama-platform/gama/blob/main/LICENSE'>
+        GNU General Public License v3.0 or later.&#xA;      See https://github.com/gama-platform/gama/blob/main/LICENSE for the full text.
+      </license>
+    </licenses>
+    <copyright>
+      (c) 2007-2026 UMI 209 UMMISCO IRD/SU &amp; Partners (IRIT, MIAT, ESPACE-DEV, CTU)
+    </copyright>
+  </unit>
+</units>

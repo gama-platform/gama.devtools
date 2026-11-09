@@ -1,0 +1,29 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: GAMA Developer Tools
+Bundle-SymbolicName: gama.ui.devtools;singleton:=true
+Bundle-Version: 0.0.0.202611061543
+Bundle-Vendor: UMMISCO
+Bundle-Activator: gama.ui.devtools.GamaDevToolsActivator
+Bundle-ActivationPolicy: lazy
+Automatic-Module-Name: gama.ui.devtools
+Require-Bundle: org.eclipse.core.runtime,org.eclipse.core.expressions,or
+ g.eclipse.core.resources,org.eclipse.core.filesystem,org.eclipse.ui,org
+ .eclipse.ui.ide,org.eclipse.ui.console,org.eclipse.ui.navigator,org.ecl
+ ipse.ui.navigator.resources,org.eclipse.jgit,org.eclipse.egit.core,com.
+ google.gson,org.eclipse.jdt.core,org.eclipse.jdt.apt.core,org.eclipse.j
+ dt.ui,org.eclipse.pde.core,org.eclipse.pde.launching,org.eclipse.debug.
+ core,org.eclipse.debug.ui,org.eclipse.jdt.launching,org.eclipse.jface,o
+ rg.eclipse.jface.text,org.eclipse.ltk.core.refactoring,org.eclipse.ltk.
+ ui.refactoring,org.eclipse.text,org.eclipse.ui.workbench.texteditor,org
+ .eclipse.jface.notifications,org.eclipse.equinox.p2.core,org.eclipse.eq
+ uinox.p2.engine,org.eclipse.equinox.p2.metadata,org.eclipse.equinox.p2.
+ repository,org.eclipse.equinox.p2.operations,org.eclipse.equinox.p2.ui
+Bundle-ClassPath: .
+Export-Package: gama.ui.devtools,gama.ui.devtools.config,gama.ui.devtool
+ s.dependencies,gama.ui.devtools.handlers,gama.ui.devtools.install,gama.
+ ui.devtools.jobs,gama.ui.devtools.keywords,gama.ui.devtools.preferences
+ ,gama.ui.devtools.quickfix,gama.ui.devtools.release,gama.ui.devtools.te
+ mplates,gama.ui.devtools.util,gama.ui.devtools.wizards
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=21))"
+

@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<units size='1'>
+  <unit id='gama.ui.devtools' version='0.0.0.202611061543' generation='2'>
+    <update id='gama.ui.devtools' range='[0.0.0,0.0.0.202611061543)' severity='0'/>
+    <properties size='6'>
+      <property name='org.eclipse.equinox.p2.name' value='GAMA Developer Tools'/>
+      <property name='org.eclipse.equinox.p2.provider' value='UMMISCO'/>
+      <property name='maven-groupId' value='org.gama'/>
+      <property name='maven-artifactId' value='gama.ui.devtools'/>
+      <property name='maven-version' value='0.0.0-SNAPSHOT'/>
+      <property name='maven-type' value='eclipse-plugin'/>
+    </properties>
+    <provides size='17'>
+      <provided namespace='org.eclipse.equinox.p2.iu' name='gama.ui.devtools' version='0.0.0.202611061543'/>
+      <provided namespace='osgi.bundle' name='gama.ui.devtools' version='0.0.0.202611061543'/>
+      <provided namespace='java.package' name='gama.ui.devtools' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.config' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.dependencies' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.handlers' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.install' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.jobs' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.keywords' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.preferences' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.quickfix' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.release' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.templates' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.util' version='0.0.0'/>
+      <provided namespace='java.package' name='gama.ui.devtools.wizards' version='0.0.0'/>
+      <provided namespace='osgi.identity' name='gama.ui.devtools' version='0.0.0.202611061543'>
+        <properties size='1'>
+          <property name='type' value='osgi.bundle'/>
+        </properties>
+      </provided>
+      <provided namespace='org.eclipse.equinox.p2.eclipse.type' name='bundle' version='1.0.0'/>
+    </provides>
+    <requires size='35'>
+      <required namespace='osgi.bundle' name='org.eclipse.core.runtime' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.core.expressions' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.core.resources' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.core.filesystem' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ui' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ui.ide' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ui.console' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ui.navigator' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ui.navigator.resources' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jgit' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.egit.core' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='com.google.gson' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jdt.core' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jdt.apt.core' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jdt.ui' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.pde.core' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.pde.launching' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.debug.core' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.debug.ui' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jdt.launching' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jface' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jface.text' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ltk.core.refactoring' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ltk.ui.refactoring' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.text' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.ui.workbench.texteditor' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.jface.notifications' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.equinox.p2.core' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.equinox.p2.engine' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.equinox.p2.metadata' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.equinox.p2.repository' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.equinox.p2.operations' range='0.0.0'/>
+      <required namespace='osgi.bundle' name='org.eclipse.equinox.p2.ui' range='0.0.0'/>
+      <requiredProperties namespace='osgi.ee' match='(&amp;(osgi.ee=JavaSE)(version=21))'>
+        <description>
+          gama.ui.devtools
+        </description>
+      </requiredProperties>
+      <required namespace='org.eclipse.equinox.p2.iu' name='gama.ui.devtools.source' range='[0.0.0.202611061543,0.0.0.202611061543]' optional='true'>
+        <filter>
+          (org.eclipse.update.install.sources=true)
+        </filter>
+      </required>
+    </requires>
+    <artifacts size='1'>
+      <artifact classifier='osgi.bundle' id='gama.ui.devtools' version='0.0.0.202611061543'/>
+    </artifacts>
+    <touchpoint id='org.eclipse.equinox.p2.osgi' version='1.0.0'/>
+    <touchpointData size='1'>
+      <instructions size='1'>
+        <instruction key='manifest'>
+          Bundle-SymbolicName: gama.ui.devtools;singleton:=true&#xA;Bundle-Version: 0.0.0.202611061543&#xA;
+        </instruction>
+      </instructions>
+    </touchpointData>
+  </unit>
+</units>

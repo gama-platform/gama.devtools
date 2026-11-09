@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="gama.feature.devtools"
+      label="GAMA Developer Tools"
+      version="0.0.0.202611061543"
+      provider-name="UMMISCO">
+
+   <description url="https://gama-platform.org">
+      Tools for the developers of GAMA, available in a "GAMA" menu of the Eclipse IDE: "Get started..."
+      guides prerequisite checks, JDK 25 configuration, source installation, building and launching;
+      wizards for new GAMA
+      plugins (standard layout, annotation processor configured, integration in the build), skills, operators,
+      actions, types and test models; "Clean GAMA plugins" resets the annotation processor and rebuilds;
+      a configuration checker with quick fixes; a report of undocumented and untested GAML elements; the rebuild
+      of the processor jar, a package dependency graph and native local releases without installing Maven.
+   </description>
+
+   <copyright>
+      (c) 2007-2026 UMI 209 UMMISCO IRD/SU &amp; Partners (IRIT, MIAT, ESPACE-DEV, CTU)
+   </copyright>
+
+   <license url="https://github.com/gama-platform/gama/blob/main/LICENSE">
+      GNU General Public License v3.0 or later.
+      See https://github.com/gama-platform/gama/blob/main/LICENSE for the full text.
+   </license>
+
+   <plugin
+         id="gama.ui.devtools"
+         version="0.0.0.202611061543"/>
+
+</feature>
