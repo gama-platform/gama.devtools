@@ -1,0 +1,25 @@
+name: Generate GAMA p2 categories
+description: >
+  Regenerates gama.plugin.p2updatesite/category.xml of a GAMA plugin repository, putting each feature in the
+  categories declared by the <gama.category> property of its plugins' pom.xml. The category list comes from
+  gama.ui.devtools/categories.xml of this repository.
+
+inputs:
+  path:
+    description: Root of the plugin repository (the folder containing gama.plugin.parent and gama.plugin.p2updatesite).
+    required: false
+    default: "."
+  categories:
+    description: URL or local path of an alternative categories.xml (defaults to the one shipped with this action).
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Generate category.xml
+      shell: bash
+      env:
+        REPO_PATH: ${{ inputs.path }}
+        GAMA_CATEGORIES_URL: ${{ inputs.categories != '' && inputs.categories || format('{0}/../../../gama.ui.devtools/categories.xml', github.action_path) }}
+      run: java "${{ github.action_path }}/GenerateCategory.java" "$REPO_PATH"
