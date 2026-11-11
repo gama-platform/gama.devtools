@@ -311,8 +311,12 @@ The **Install GAMA sources** submenu and the **Get started...** wizard offer jus
 **Install core plugins...** and **Install community plugins...**. Both group their choices using the
 GAMA category names in `categories.xml`, independently of the Eclipse workspace working sets.
 
-**Core plugins** automatically offers these repositories; only the base GAMA repository is checked
-initially. Select additional repositories or an entire category before choosing **Next**:
+**Core plugins** opens directly on the project list for the base GAMA checkout. An existing checkout
+is read as-is, without fetching or switching branches; if it is missing, the default GAMA sources are
+cloned before the list is loaded. Already imported projects are grayed out and cannot be checked.
+Choose **Advanced...** to open the repository settings, adjust branches or checkout directories, or
+select additional repositories or an entire category. **Next** applies those choices and returns to
+the project list. Only the base GAMA repository is checked initially:
 
 | Category | Repository | Default branch |
 |---|---|---|
@@ -342,14 +346,15 @@ Discovery uses GitHub's public API (with pagination); rate-limit and network err
 Clone/fetch uses JGit, so a separate Git executable is not needed. Public HTTPS repositories work
 without authentication.
 
-**Next** clones a missing repository or fetches, checks out the selected branch and fast-forwards an existing
-clean checkout with a matching origin. If local changes exist, you can abort or explicitly authorize
+On the repository settings page, **Next** clones a missing repository or fetches, checks out the selected
+branch and fast-forwards an existing clean checkout with a matching origin. If local changes exist,
+you can abort or explicitly authorize
 stashing them; unfinished Git operations and branches with local commits must be reconciled manually
 or installed in another directory. It never resets or overwrites local edits. Checkout happens before
 project selection and is retained on cancellation.
-Projects are imported in place and shared with EGit, not copied into the workspace. Already imported projects
-are shown but not selected, and duplicate project names across repositories must be resolved by selecting
-only one.
+Projects are imported in place and shared with EGit, not copied into the workspace. Already imported
+projects are grayed out and cannot be checked, and duplicate project names across repositories must be
+resolved by selecting only one.
 
 The final page offers additive working sets based on `utils/Project sets for Gama.psf`. Choose which sets
 to create/update. Core installation preselects the **==================== EXPORT** working set, containing

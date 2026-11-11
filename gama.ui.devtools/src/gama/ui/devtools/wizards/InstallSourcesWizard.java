@@ -26,12 +26,14 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.CheckboxTableViewer;
 import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.ArrayContentProvider;
+import org.eclipse.jface.viewers.ColumnLabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -173,55 +175,71 @@ public class InstallSourcesWizard extends Wizard {
 	}
 
 	@Override
+	public IWizardPage getStartingPage() {
+		return kind == Kind.CORE ? projects : source;
+	}
+
+	@Override
 	public IWizardPage getNextPage(final IWizardPage page) {
-		if (page == source) {
-			if (definitions == null) return null;
-			Path directory = Path.of(source.location.getText().strip()).toAbsolutePath().normalize();
-			List<RemoteProject> selected = source.selectedProjects();
-			List<Repository> repositories = source.selectedRepositories();
-			String key = repositories.stream().map(repository -> repository + "\n"
-					+ source.checkout(repository, directory)).toList() + "\n" + selected;
-			if (!key.equals(prepared)) {
-				List<Project> available = new ArrayList<>();
-				Map<Repository, Path> locations = new LinkedHashMap<>();
-				if (!run(source, monitor -> {
-					available.clear();
-					locations.clear();
-					SubMonitor sub = SubMonitor.convert(monitor, "Checking out selected source repositories", repositories.size());
-					for (Repository repository : repositories) {
-						if (sub.isCanceled()) throw new OperationCanceledException();
-						Path checkout = source.checkout(repository, directory);
+		if (page == source && !prepareProjects(source, false)) return null;
+		return super.getNextPage(page);
+	}
+
+	private boolean prepareProjects(final WizardPage page, final boolean reuseCheckout) {
+		if (definitions == null) {
+			page.setErrorMessage("Bundled installation settings could not be loaded. See the Error Log.");
+			page.setPageComplete(false);
+			return false;
+		}
+		Path directory = Path.of(source.location.getText().strip()).toAbsolutePath().normalize();
+		List<RemoteProject> selected = source.selectedProjects();
+		List<Repository> repositories = source.selectedRepositories();
+		String key = repositories.stream().map(repository -> repository + "\n"
+				+ source.checkout(repository, directory)).toList() + "\n" + selected + "\n" + reuseCheckout;
+		if (!key.equals(prepared)) {
+			List<Project> available = new ArrayList<>();
+			Map<Repository, Path> locations = new LinkedHashMap<>();
+			if (!run(page, monitor -> {
+				available.clear();
+				locations.clear();
+				SubMonitor sub = SubMonitor.convert(monitor, "Loading source projects", repositories.size());
+				for (Repository repository : repositories) {
+					if (sub.isCanceled()) throw new OperationCanceledException();
+					Path checkout = source.checkout(repository, directory);
+					if (!reuseCheckout || !Files.exists(checkout.resolve(".git"))) {
 						RepositoryCheckout.prepare(repository, checkout, sub.split(1));
-						List<Project> discovered = InstallModel.projects(checkout, repository, kind);
-						if (discovered.isEmpty()) {
-							throw new java.io.IOException("No Eclipse projects (.project files) found in " + checkout);
-						}
-						locations.put(repository, checkout);
-						if (kind == Kind.CORE) {
-							available.addAll(discovered);
-						} else {
-							for (RemoteProject remote : selected) {
-								if (!remote.repository().equals(repository)) continue;
-								Path expected = checkout.resolve(remote.path()).normalize();
-								Project project = discovered.stream().filter(p -> p.directory().equals(expected))
-										.findFirst().orElseThrow(() -> new java.io.IOException(
-												"The selected project no longer exists: " + expected + ". Reload the GitHub project list."));
-								available.add(new Project(project.name(), project.directory(), repository, true, false));
-							}
+					} else {
+						sub.worked(1);
+					}
+					List<Project> discovered = InstallModel.projects(checkout, repository, kind);
+					if (discovered.isEmpty()) {
+						throw new java.io.IOException("No Eclipse projects (.project files) found in " + checkout);
+					}
+					locations.put(repository, checkout);
+					if (kind == Kind.CORE) {
+						available.addAll(discovered);
+					} else {
+						for (RemoteProject remote : selected) {
+							if (!remote.repository().equals(repository)) continue;
+							Path expected = checkout.resolve(remote.path()).normalize();
+							Project project = discovered.stream().filter(p -> p.directory().equals(expected))
+									.findFirst().orElseThrow(() -> new java.io.IOException(
+											"The selected project no longer exists: " + expected + ". Reload the GitHub project list."));
+							available.add(new Project(project.name(), project.directory(), repository, true, false));
 						}
 					}
-				})) return null;
-				if (available.isEmpty()) {
-					source.setErrorMessage("No Eclipse projects (.project files) found in the selected checkout.");
-					return null;
 				}
-				checkouts.clear();
-				checkouts.putAll(locations);
-				projects.setProjects(available);
-				prepared = key;
+			})) return false;
+			if (available.isEmpty()) {
+				page.setErrorMessage("No Eclipse projects (.project files) found in the selected checkout.");
+				return false;
 			}
+			checkouts.clear();
+			checkouts.putAll(locations);
+			projects.setProjects(available);
+			prepared = key;
 		}
-		return super.getNextPage(page);
+		return true;
 	}
 
 	@Override
@@ -342,6 +360,11 @@ public class InstallSourcesWizard extends Wizard {
 		public boolean canFlipToNextPage() {
 			// JFace probes this while updating buttons; only an explicit Next may check out repositories.
 			return isPageComplete();
+		}
+
+		@Override
+		public IWizardPage getPreviousPage() {
+			return kind == Kind.CORE ? null : super.getPreviousPage();
 		}
 
 		@Override
@@ -622,6 +645,7 @@ public class InstallSourcesWizard extends Wizard {
 	private final class ProjectsPage extends WizardPage {
 		CheckboxTableViewer viewer;
 		List<Project> available = List.of();
+		boolean initialized;
 
 		ProjectsPage() {
 			super("projects");
@@ -630,17 +654,41 @@ public class InstallSourcesWizard extends Wizard {
 					+ "Core Maven modules and projects from the selected additional core repositories are preselected; "
 					+ String.join(" and ", InstallModel.REQUIRED_CORE_PROJECTS.stream().sorted().toList())
 					+ " are always imported.");
+			setPageComplete(false);
+		}
+
+		@Override
+		public IWizardPage getPreviousPage() {
+			return kind == Kind.CORE ? null : super.getPreviousPage();
+		}
+
+		@Override
+		public void setVisible(final boolean visible) {
+			super.setVisible(visible);
+			if (visible && kind == Kind.CORE && !initialized) {
+				initialized = true;
+				getControl().getDisplay().asyncExec(() -> {
+					if (getControl().isDisposed()) return;
+					prepareProjects(this, true);
+					getContainer().updateButtons();
+				});
+			}
 		}
 
 		@Override
 		public void createControl(final Composite parent) {
 			Composite body = body(parent, 3);
 			viewer = table(body);
-			viewer.setLabelProvider(new LabelProvider() {
+			viewer.setLabelProvider(new ColumnLabelProvider() {
 				@Override public String getText(final Object element) {
 					Project project = (Project) element;
 					return project.name() + "  -  " + project.repository().name()
 							+ (exists(project) ? " (already in workspace)" : project.required() ? " (required)" : "");
+				}
+
+				@Override public Color getForeground(final Object element) {
+					return exists((Project) element)
+							? viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_WIDGET_DISABLED_FOREGROUND) : null;
 				}
 			});
 			viewer.addCheckStateListener(e -> {
@@ -656,6 +704,12 @@ public class InstallSourcesWizard extends Wizard {
 				}
 				validate();
 			});
+			if (kind == Kind.CORE) {
+				Button advanced = check(body, "Advanced...", false, SWT.PUSH);
+				advanced.addListener(SWT.Selection, e -> getContainer().showPage(source));
+				note(body, "Advanced settings let you choose repositories, branches and checkout directories. "
+						+ "Choose Next there to return to this list.");
+			}
 			note(body, "Projects remain in their Git checkout; they are not copied into the workspace. "
 					+ "Selecting no new projects still lets you apply workspace settings.");
 			setControl(body);
@@ -693,7 +747,7 @@ public class InstallSourcesWizard extends Wizard {
 					break;
 				}
 			}
-			setPageComplete(getErrorMessage() == null);
+			setPageComplete(!available.isEmpty() && getErrorMessage() == null);
 		}
 	}
 
