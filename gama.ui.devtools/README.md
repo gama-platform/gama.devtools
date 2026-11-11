@@ -311,12 +311,13 @@ The **Install GAMA sources** submenu and the **Get started...** wizard offer jus
 **Install core plugins...** and **Install community plugins...**. Both group their choices using the
 GAMA category names in `categories.xml`, independently of the Eclipse workspace working sets.
 
-**Core plugins** opens directly on the project list for the base GAMA checkout. An existing checkout
-is read as-is, without fetching or switching branches; if it is missing, the default GAMA sources are
-cloned before the list is loaded. Already imported projects are grayed out and cannot be checked.
+**Core plugins** opens directly on the project list for all four repositories below. Existing checkouts
+are read as-is, without fetching or switching branches; missing repositories are cloned before the
+list is loaded, even if none of their projects are selected. Already imported projects are grayed out
+and cannot be checked. Only recommended base GAMA projects are preselected initially.
 Choose **Advanced...** to open the repository settings, adjust branches or checkout directories, or
-select additional repositories or an entire category. **Next** applies those choices and returns to
-the project list. Only the base GAMA repository is checked initially:
+choose repositories or an entire category. **Next** applies those choices and returns to
+the project list. All four repositories are checked initially:
 
 | Category | Repository | Default branch |
 |---|---|---|
@@ -327,8 +328,8 @@ the project list. Only the base GAMA repository is checked initially:
 
 For the base GAMA checkout, the project page preselects modules listed in `gama.parent/pom.xml` plus
 `gama.parent`, including the export projects. `gama.processor`, `gama.annotations` and `gaml.grammar`
-are required when that checkout is selected. Projects in additional selected repositories are
-preselected, including their feature/build projects; already imported projects are not selected again.
+are required when that checkout is selected. Projects from additional repositories, including their
+feature/build projects, are initially unchecked; already imported projects cannot be selected.
 The Copilot repository contains GAMA's integration sources, not Microsoft's implementation.
 
 **Community plugins** discovers repositories in `https://github.com/gama-platform-plugins` and lists

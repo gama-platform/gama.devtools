@@ -181,7 +181,10 @@ public class InstallSourcesWizard extends Wizard {
 
 	@Override
 	public IWizardPage getNextPage(final IWizardPage page) {
-		if (page == source && !prepareProjects(source, false)) return null;
+		if (page == source) {
+			if (!prepareProjects(source, false)) return null;
+			if (kind == Kind.CORE) projects.initialized = true;
+		}
 		return super.getNextPage(page);
 	}
 
@@ -193,7 +196,9 @@ public class InstallSourcesWizard extends Wizard {
 		}
 		Path directory = Path.of(source.location.getText().strip()).toAbsolutePath().normalize();
 		List<RemoteProject> selected = source.selectedProjects();
-		List<Repository> repositories = source.selectedRepositories();
+		List<Repository> repositories = reuseCheckout && kind == Kind.CORE
+				? source.entries.stream().filter(Repository.class::isInstance).map(Repository.class::cast).toList()
+				: source.selectedRepositories();
 		String key = repositories.stream().map(repository -> repository + "\n"
 				+ source.checkout(repository, directory)).toList() + "\n" + selected + "\n" + reuseCheckout;
 		if (!key.equals(prepared)) {
@@ -384,8 +389,7 @@ public class InstallSourcesWizard extends Wizard {
 				if (path != null) location.setText(path);
 			});
 			note(body, kind == Kind.CORE
-					? "GAMA sources are selected by default. Shared models, graphical modeling and Copilot are "
-							+ "offered here automatically; select the additional repositories you want."
+					? "Choose which repositories to show in the project list and adjust their settings."
 					: "Projects from https://github.com/gama-platform-plugins, grouped by their GAMA categories. "
 							+ "Projects without category metadata appear under Others.");
 			if (kind == Kind.COMMUNITY) {
@@ -446,7 +450,7 @@ public class InstallSourcesWizard extends Wizard {
 					validate();
 				});
 			} else {
-				setEntries(InstallModel.CORE_REPOSITORIES, Set.of(InstallModel.CORE_REPOSITORIES.get(0)));
+				setEntries(InstallModel.CORE_REPOSITORIES, Set.copyOf(InstallModel.CORE_REPOSITORIES));
 			}
 			note(body, "Checkout happens on Next and is kept even if you cancel the wizard. "
 					+ "Dirty or diverged repositories must be updated manually or installed in another directory.");
@@ -651,7 +655,7 @@ public class InstallSourcesWizard extends Wizard {
 			super("projects");
 			setTitle("Import projects");
 			setDescription("Choose projects to import. Existing workspace projects cannot be selected. "
-					+ "Core Maven modules and projects from the selected additional core repositories are preselected; "
+					+ "Core Maven modules are preselected; "
 					+ String.join(" and ", InstallModel.REQUIRED_CORE_PROJECTS.stream().sorted().toList())
 					+ " are always imported.");
 			setPageComplete(false);
@@ -669,6 +673,10 @@ public class InstallSourcesWizard extends Wizard {
 				initialized = true;
 				getControl().getDisplay().asyncExec(() -> {
 					if (getControl().isDisposed()) return;
+					if (getContainer().getCurrentPage() != this) {
+						initialized = false;
+						return;
+					}
 					prepareProjects(this, true);
 					getContainer().updateButtons();
 				});
@@ -705,7 +713,9 @@ public class InstallSourcesWizard extends Wizard {
 				validate();
 			});
 			if (kind == Kind.CORE) {
-				Button advanced = check(body, "Advanced...", false, SWT.PUSH);
+				Button advanced = new Button(body, SWT.PUSH);
+				advanced.setText("Advanced...");
+				advanced.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 3, 1));
 				advanced.addListener(SWT.Selection, e -> getContainer().showPage(source));
 				note(body, "Advanced settings let you choose repositories, branches and checkout directories. "
 						+ "Choose Next there to return to this list.");
@@ -717,8 +727,28 @@ public class InstallSourcesWizard extends Wizard {
 		}
 
 		void setProjects(final List<Project> projects) {
+			Set<String> selected = new LinkedHashSet<>();
+			Set<String> previous = new LinkedHashSet<>();
+			if (kind == Kind.CORE && viewer != null) {
+				for (Project project : available) previous.add(projectKey(project));
+				for (Object item : viewer.getCheckedElements()) selected.add(projectKey((Project) item));
+			}
 			available = List.copyOf(projects);
-			if (viewer != null) populate();
+			if (viewer != null) {
+				populate();
+				if (kind == Kind.CORE && !previous.isEmpty()) {
+					for (Project project : available) {
+						if (previous.contains(projectKey(project)) && !exists(project) && !project.required()) {
+							viewer.setChecked(project, selected.contains(projectKey(project)));
+						}
+					}
+					validate();
+				}
+			}
+		}
+
+		private String projectKey(final Project project) {
+			return project.repository().name() + "\n" + project.name();
 		}
 
 		private boolean exists(final Project project) {
@@ -728,7 +758,9 @@ public class InstallSourcesWizard extends Wizard {
 
 		private void populate() {
 			viewer.setInput(available);
-			viewer.setCheckedElements(available.stream().filter(p -> p.recommended() && !exists(p)).toArray());
+			viewer.setCheckedElements(available.stream()
+					.filter(p -> p.recommended() && !exists(p)
+							&& (kind != Kind.CORE || p.repository().isBase())).toArray());
 			viewer.setGrayedElements(available.stream().filter(p -> exists(p) || p.required()).toArray());
 			validate();
 		}
