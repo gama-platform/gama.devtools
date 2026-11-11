@@ -1,19 +1,24 @@
 /*
- * Regenerates gama.plugin.p2updatesite/category.xml from:
+ * Regenerates the category.xml of a GAMA plugin p2 update site from:
  *   - the shared category list maintained in gama.devtools (gama.ui.devtools/categories.xml)
- *   - the <gama.category> property of each plugin pom.xml in this repository
+ *   - the <gama.category> property of each plugin pom.xml in the repository
  *
- * Every feature listed as a module of gama.plugin.parent is published in the categories of the plugins it
- * contains (a feature pom can also declare its own <gama.category>). Several categories can be given as a
- * comma-separated list. A feature without any category falls back to gama.category.other.
+ * Every feature reachable from the modules of the parent pom (nested aggregator poms included) is published
+ * in the categories of the plugins it contains (a feature pom can also declare its own <gama.category>).
+ * Several categories can be given as a comma-separated list. A feature without any category gets the
+ * fallback category.
  *
  * Normally run by the p2-categories GitHub action of gama.devtools (see README.md next to this file).
  * Manual usage (JDK 17+, no compilation needed):
  *   java GenerateCategory.java <plugin repository root>
  *
- * Environment:
- *   GAMA_CATEGORIES_URL  URL or local path of categories.xml
- *                        (default: gama.devtools main branch on GitHub; the action passes its own local copy)
+ * Environment (relative paths are resolved against the repository root):
+ *   GAMA_CATEGORIES_URL     URL or local path of categories.xml
+ *                           (default: DEFAULT_CATEGORIES_URL; the action passes its own local copy)
+ *   GAMA_FALLBACK_CATEGORY  category of features without any <gama.category> (default: FALLBACK_CATEGORY);
+ *                           set it to an empty string to fail the build instead
+ *   GAMA_PARENT_POM         pom.xml listing the modules, or its folder (default: DEFAULT_PARENT_POM)
+ *   GAMA_CATEGORY_OUTPUT    category.xml to write (default: DEFAULT_OUTPUT)
  */
 
 import java.io.IOException;
@@ -26,8 +31,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,6 +57,8 @@ public class GenerateCategory {
 	static final String DEFAULT_CATEGORIES_URL =
 			"https://raw.githubusercontent.com/gama-platform/gama.devtools/main/gama.ui.devtools/categories.xml";
 	static final String FALLBACK_CATEGORY = "gama.category.other";
+	static final String DEFAULT_PARENT_POM = "gama.plugin.parent/pom.xml";
+	static final String DEFAULT_OUTPUT = "gama.plugin.p2updatesite/category.xml";
 	static final String DOC_URL =
 			"https://github.com/gama-platform/gama.devtools/tree/main/.github/actions/p2-categories";
 
@@ -56,11 +66,17 @@ public class GenerateCategory {
 
 	public static void main(String[] args) throws Exception {
 		Path root = Path.of(args.length > 0 ? args[0] : ".").toAbsolutePath().normalize();
-		Path parentDir = root.resolve("gama.plugin.parent");
-		Path output = root.resolve("gama.plugin.p2updatesite/category.xml");
+		Path parentPom = root.resolve(setting("GAMA_PARENT_POM", DEFAULT_PARENT_POM)).normalize();
+		if (Files.isDirectory(parentPom)) parentPom = parentPom.resolve("pom.xml");
+		Path output = root.resolve(setting("GAMA_CATEGORY_OUTPUT", DEFAULT_OUTPUT)).normalize();
+		// An explicitly empty value disables the fallback, so unset and blank are told apart here
+		String fallback = System.getenv().getOrDefault("GAMA_FALLBACK_CATEGORY", FALLBACK_CATEGORY).trim();
+		if (!Files.isDirectory(output.getParent())) fail("Output folder does not exist: " + output.getParent());
 
 		// 1. Category definitions (id -> label), in the order of the shared file
-		String source = System.getenv().getOrDefault("GAMA_CATEGORIES_URL", DEFAULT_CATEGORIES_URL);
+		String source = setting("GAMA_CATEGORIES_URL", DEFAULT_CATEGORIES_URL);
+		// A relative local path is read from the repository root, like the other paths
+		if (!source.matches("^https?://.*")) source = root.resolve(source).normalize().toString();
 		Map<String, String> categoryDefs = new LinkedHashMap<>();
 		NodeList cats = parse(fetch(source)).getElementsByTagName("category");
 		for (int i = 0; i < cats.getLength(); i++) {
@@ -69,27 +85,37 @@ public class GenerateCategory {
 		}
 		if (categoryDefs.isEmpty()) fail("No <category> found in " + source);
 
-		// 2. Walk the modules of the parent pom
+		// 2. Walk the modules of the parent pom, descending into nested aggregator poms
 		Map<String, Set<String>> pluginCategories = new HashMap<>();
 		Map<String, Feature> features = new TreeMap<>();
-		for (String module : textList(parse(parentDir.resolve("pom.xml")), "/project/modules/module")) {
-			Path dir = parentDir.resolve(module).normalize();
-			Document pom = parse(dir.resolve("pom.xml"));
-			String packaging = text(pom, "/project/packaging");
-			Set<String> declared = splitCategories(text(pom, "/project/properties/gama.category"));
-			switch (packaging) {
-				case "eclipse-plugin", "eclipse-test-plugin" -> pluginCategories.put(bundleId(dir, pom), declared);
-				case "eclipse-feature" -> {
-					Document f = parse(dir.resolve("feature.xml"));
-					Element fe = f.getDocumentElement();
-					features.put(fe.getAttribute("id"), new Feature(fe.getAttribute("id"),
-							fe.getAttribute("version"), attrList(f, "plugin", "id"), attrList(f, "includes", "id"),
-							declared));
+		Deque<Path> aggregators = new ArrayDeque<>(List.of(parentPom));
+		Set<Path> visitedPoms = new HashSet<>();
+		while (!aggregators.isEmpty()) {
+			Path aggregator = aggregators.pop();
+			if (!visitedPoms.add(aggregator)) continue;
+			for (String module : textList(parse(aggregator), "/project/modules/module")) {
+				Path modulePath = aggregator.getParent().resolve(module).normalize();
+				// A <module> can name a folder or a pom file directly
+				Path pomFile = Files.isDirectory(modulePath) ? modulePath.resolve("pom.xml") : modulePath;
+				Path dir = pomFile.getParent();
+				Document pom = parse(pomFile);
+				String packaging = text(pom, "/project/packaging");
+				Set<String> declared = splitCategories(text(pom, "/project/properties/gama.category"));
+				switch (packaging) {
+					case "eclipse-plugin", "eclipse-test-plugin" -> pluginCategories.put(bundleId(dir, pom), declared);
+					case "eclipse-feature" -> {
+						Document f = parse(dir.resolve("feature.xml"));
+						Element fe = f.getDocumentElement();
+						features.put(fe.getAttribute("id"), new Feature(fe.getAttribute("id"),
+								fe.getAttribute("version"), attrList(f, "plugin", "id"),
+								attrList(f, "includes", "id"), declared));
+					}
+					case "pom" -> aggregators.push(pomFile);
+					default -> { /* p2 update site, products... */ }
 				}
-				default -> { /* p2 update site, poms... */ }
 			}
 		}
-		if (features.isEmpty()) fail("No eclipse-feature module found in " + parentDir.resolve("pom.xml"));
+		if (features.isEmpty()) fail("No eclipse-feature module found from " + root.relativize(parentPom));
 
 		// 3. Resolve the categories of each feature
 		Map<String, Set<String>> resolved = new TreeMap<>();
@@ -97,9 +123,10 @@ public class GenerateCategory {
 			Set<String> result = new LinkedHashSet<>();
 			collect(f, features, pluginCategories, result, new LinkedHashSet<>());
 			if (result.isEmpty()) {
-				System.err.println("WARNING: no <gama.category> found for feature " + f.id() + " or its plugins, using "
-						+ FALLBACK_CATEGORY);
-				result.add(FALLBACK_CATEGORY);
+				if (fallback.isEmpty()) fail("No <gama.category> found for feature " + f.id() + " or its plugins");
+				System.err.println(
+						"WARNING: no <gama.category> found for feature " + f.id() + " or its plugins, using " + fallback);
+				result.add(fallback);
 			}
 			for (String c : result) {
 				if (!categoryDefs.containsKey(c)) fail("Unknown category '" + c + "' used by feature " + f.id()
@@ -140,6 +167,12 @@ public class GenerateCategory {
 		Files.writeString(output, sb.toString(), StandardCharsets.UTF_8);
 		System.out.println("Generated " + root.relativize(output) + ":");
 		resolved.forEach((id, c) -> System.out.println("  " + id + " -> " + String.join(", ", c)));
+	}
+
+	/** Value of an environment variable, or the default when it is unset or blank. */
+	static String setting(String name, String defaultValue) {
+		String value = System.getenv(name);
+		return value == null || value.isBlank() ? defaultValue : value.trim();
 	}
 
 	/** Union of the feature's own categories, its plugins' and (recursively) its included features'. */

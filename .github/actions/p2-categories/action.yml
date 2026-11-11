@@ -1,16 +1,35 @@
 name: Generate GAMA p2 categories
 description: >
-  Regenerates gama.plugin.p2updatesite/category.xml of a GAMA plugin repository, putting each feature in the
-  categories declared by the <gama.category> property of its plugins' pom.xml. The category list comes from
+  Regenerates the category.xml of a GAMA plugin p2 update site, putting each feature in the categories
+  declared by the <gama.category> property of its plugins' pom.xml. The category list comes from
   gama.ui.devtools/categories.xml of this repository.
 
 inputs:
   path:
-    description: Root of the plugin repository (the folder containing gama.plugin.parent and gama.plugin.p2updatesite).
+    description: Root of the plugin repository. The other paths are relative to it.
     required: false
     default: "."
+  parent-pom:
+    description: >
+      pom.xml (or its folder) whose <modules> list the plugins and features. Nested aggregator poms are
+      followed. Use "pom.xml" for a repository with a root aggregator pom.
+    required: false
+    default: "gama.plugin.parent/pom.xml"
+  output:
+    description: category.xml to (re)generate, usually in the eclipse-repository module.
+    required: false
+    default: "gama.plugin.p2updatesite/category.xml"
+  fallback-category:
+    description: >
+      Category of features whose plugins declare no <gama.category>. Set it to an empty string to fail the
+      build instead.
+    required: false
+    default: "gama.category.other"
   categories:
-    description: URL or local path of an alternative categories.xml (defaults to the one shipped with this action).
+    description: >
+      URL or path of the categories.xml to use. Empty (default) means the copy shipped with this action, i.e.
+      gama.ui.devtools/categories.xml at the same ref as the action. Outside the action, the script falls back
+      to https://raw.githubusercontent.com/gama-platform/gama.devtools/main/gama.ui.devtools/categories.xml
     required: false
     default: ""
 
@@ -21,5 +40,8 @@ runs:
       shell: bash
       env:
         REPO_PATH: ${{ inputs.path }}
+        GAMA_PARENT_POM: ${{ inputs.parent-pom }}
+        GAMA_CATEGORY_OUTPUT: ${{ inputs.output }}
+        GAMA_FALLBACK_CATEGORY: ${{ inputs.fallback-category }}
         GAMA_CATEGORIES_URL: ${{ inputs.categories != '' && inputs.categories || format('{0}/../../../gama.ui.devtools/categories.xml', github.action_path) }}
       run: java "${{ github.action_path }}/GenerateCategory.java" "$REPO_PATH"
