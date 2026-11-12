@@ -200,6 +200,9 @@
                <command commandId="gama.ui.devtools.gamlReport" style="push"/>
             </menu>
             <separator name="create" visible="true"/>
+            <command commandId="gama.ui.devtools.openNewWizard" label="Import GAMA project into plugin..." style="push">
+               <parameter name="gama.ui.devtools.wizardId" value="gama.ui.devtools.wizards.importModelProject"/>
+            </command>
             <menu id="gama.ui.devtools.menu.create" label="Create GAMA artefacts">
                <command commandId="gama.ui.devtools.openNewWizard" label="New GAMA Plugin..." style="push">
                   <parameter name="gama.ui.devtools.wizardId" value="gama.ui.devtools.wizards.plugin"/>
@@ -265,6 +268,11 @@
    <!-- New wizards (also available in File > New > Other...) -->
    <extension point="org.eclipse.ui.newWizards">
       <category id="gama.ui.devtools.wizards" name="GAMA Development"/>
+      <wizard id="gama.ui.devtools.wizards.importModelProject" category="gama.ui.devtools.wizards"
+            name="Import GAMA Project into Plugin" class="gama.ui.devtools.wizards.ImportModelProjectWizard"
+            icon="icons/gama.png" project="false">
+         <description>Copies a GAMA project into a plugin's model library.</description>
+      </wizard>
       <wizard id="gama.ui.devtools.wizards.plugin" category="gama.ui.devtools.wizards" name="New GAMA Plugin"
             class="gama.ui.devtools.wizards.NewGamaPluginWizard" icon="icons/gama.png" project="true">
          <description>Creates a GAMA plugin with the standard layout (src, gaml, libs, models), the annotation processor configured and a Maven pom.</description>

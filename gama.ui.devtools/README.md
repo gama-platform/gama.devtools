@@ -102,7 +102,7 @@ Debug UI / Debug headless, then a separator and Build local release...);
 **Clean GAMA plugins**; **Repair GAMA plugins**; a separator; **Check workspace...** and
 **Search GAML keyword...** directly in the menu and the **Report** submenu
 (Native library dependencies / Missing annotations);
-a separator; **Create GAMA artefacts**; a separator; **Report an issue...**;
+a separator; **Import GAMA project into plugin...** and **Create GAMA artefacts**; a separator; **Report an issue...**;
 then **Install GAMA sources** and **Update GAMA tools...**.
 The **Create GAMA artefacts** submenu lists all six creation wizards. They are also available in
 *File > New > Other... > GAMA Development*.
@@ -127,6 +127,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Report > Native library dependencies** | Runs `jdeps` on compiled bundles and libraries and produces an interactive HTML dependency explorer and DOT export. This needs a full JDK, but no graph library. See [Static GAMA Dependencies Analysis](README_DEPENDENCIES_GRAPH.md) for standalone use and DOT compatibility. |
 | **Update GAMA tools...** | Checks for and directly installs developer tools updates, or reports that no update is available. |
 | **Report an issue...** | Opens `https://github.com/gama-platform/gama.devtools/issues/new` in the external web browser. Review and submit the issue on GitHub (sign-in may be required); nothing is submitted automatically. |
+| **Import GAMA project into plugin...** | Copies a GAMA project directory into a plugin's `models/` library, updates its project metadata and includes `models/` in the PDE bundle (see below). |
 | **Create GAMA artefacts > New GAMA Plugin / Skill / Operator / Action / Type / GAML Test Model** | Creation wizards, also available in *File > New > Other... > GAMA Development*. |
 | **Install GAMA sources > Install core plugins... / Install community plugins...** | Offers sources by category, checks out selected repositories, imports selected projects and optionally applies working sets and workspace preferences (see below). |
 
@@ -138,6 +139,33 @@ name from the URI-encoded project name. The final segment must be unique among w
 plugins: it determines `gaml.additions.<segment>.GamlAdditions`. The wizard explains naming errors
 and disables **Finish** until they are corrected; uppercase package names produce a non-blocking
 convention warning.
+
+### Packaging a model project in a plugin
+
+Choose **GAMA > Import GAMA project into plugin...** and select the source project directory (containing
+`.project`), an open GAMA plugin and one of `Data`, `Demos`, `Library`, `Recipes`, `Tutorials` or
+`Tests`. The assistant copies the project to `models/<category>/<project name>/`, leaving the source
+untouched. It updates the copy's GAMA/Xtext natures and builder and sets its project comment to the
+bundle symbolic name. It also adds `models/` to `bin.includes` in the plugin's `build.properties`.
+Existing destination projects are never overwritten. Git metadata is excluded; linked resources and
+symbolic links must first be copied into the project as ordinary files. Include all datasets and GAML
+imports needed by the models, and check paths that point outside the project.
+
+For the equivalent manual procedure, copy the complete project under
+`models/<category>/<project name>/`, preserving its `.project`, models and data. Its `.project` should
+declare `org.eclipse.xtext.ui.shared.xtextNature`, `gama.workspace.nature` and the
+`org.eclipse.xtext.ui.shared.xtextBuilder`; set its comment to the bundle symbolic name. Remove obsolete
+GAMA classification natures; the category is determined by the containing folder. Add `models/` to
+`bin.includes` in `build.properties`. GAMA scans bundles declaring `gaml.extension` (as well as
+`gama.core` and `gama.library`), so an arbitrary PDE bundle is not enough.
+
+The plugin must also be included in the running product or installed as part of a compatible feature:
+copying models alone does not distribute it. For a workspace launch, use **GAMA > Add to GAMA build...**
+on the plugin if necessary, then launch GAMA and check the corresponding library category. To ship a
+full application, include its feature in the product and build a release; for separate installation,
+publish a feature and p2 update site for the target GAMA version. See
+[Developing Plugins](https://github.com/gama-platform/gama/wiki/Developing-Plugins) and
+[Creating a release of GAMA](https://github.com/gama-platform/gama/wiki/CreatingAReleaseOfGama).
 
 The **Clean GAMA plugins** shortcut takes precedence over Eclipse's standard Build All binding in the default
 key scheme. It always targets all GAMA plugins, regardless of selection. Explicit user bindings and more
