@@ -25,9 +25,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.MultiStatus;
-import org.eclipse.jface.dialogs.ErrorDialog;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.jdt.ui.jarpackager.IJarDescriptionReader;
 import org.eclipse.jdt.ui.jarpackager.IJarBuilder;
 import org.eclipse.jdt.ui.jarpackager.IJarBuilderExtension;
@@ -55,21 +53,30 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(final ExecutionEvent event) {
-		Shell shell = HandlerUtil.getActiveShell(event);
+		if (!PlatformUI.getWorkbench().saveAllEditors(true)) return null;
+		CleanAndRebuildJob job = new CleanAndRebuildJob(GamaProjects.all(), true, true);
+		var window = HandlerUtil.getActiveWorkbenchWindow(event);
+		job.setUser(true);
+		PlatformUI.getWorkbench().getProgressService().showInDialog(window == null ? null : window.getShell(), job);
+		job.schedule();
+		return null;
+	}
+
+	/**
+	 * Exports {@code gama.processor/gama.processor.jar} from {@value #JARDESC} and records its reuse fingerprint.
+	 */
+	public static IStatus exportProcessorJar(final Shell shell, final IProgressMonitor monitor) throws CoreException {
 		IProject proc = GamaProjects.processor();
 		if (proc == null || !proc.isOpen()) {
-			MessageDialog.openError(shell, "GAMA", "The project '" + GamaProjects.PROCESSOR_PROJECT + "' is not open");
-			return null;
+			return ResourceUtils.error("The project '" + GamaProjects.PROCESSOR_PROJECT + "' is not open", null);
 		}
 		IFile desc = proc.getFile(JARDESC);
 		if (!desc.exists()) {
-			MessageDialog.openError(shell, "GAMA", "'" + desc.getFullPath() + "' does not exist");
-			return null;
+			return ResourceUtils.error("'" + desc.getFullPath() + "' does not exist", null);
 		}
-		if (!PlatformUI.getWorkbench().saveAllEditors(true)) return null;
 		try {
 			var source = proc.getLocation().removeLastSegments(1).toFile().toPath().toRealPath();
-			String inputs = ProcessorReuse.inputs(source, () -> false);
+			String inputs = ProcessorReuse.inputs(source, () -> monitor != null && monitor.isCanceled());
 			JarPackageData data = new JarPackageData();
 			try (InputStream in = desc.getContents(true)) {
 				IJarDescriptionReader reader = data.createJarDescriptionReader(in);
@@ -86,27 +93,22 @@ public class RebuildProcessorJarHandler extends AbstractHandler {
 			data.setSaveManifest(false);
 			data.setJarBuilder(new ProcessorJarBuilder(data.getJarBuilder()));
 			IJarExportRunnable runnable = data.createJarExportRunnable(shell);
-			new ProgressMonitorDialog(shell).run(true, true, runnable);
+			runnable.run(monitor);
 			proc.refreshLocal(IResource.DEPTH_ONE, null);
 			IStatus status = runnable.getStatus();
-			if (status.getSeverity() == IStatus.ERROR) {
-				ErrorDialog.openError(shell, "GAMA", "The processor jar could not be generated", status);
-			} else if (status.isOK()) {
+			if (status.isOK()) {
 				ProcessorReuse.record(source, inputs);
-				new CleanAndRebuildJob(GamaProjects.all(), true).schedule();
-			} else {
-				ErrorDialog.openError(shell, "GAMA", "The processor export reported problems; release reuse is disabled.", status);
 			}
+			return status;
 		} catch (InvocationTargetException e) {
-			ErrorDialog.openError(shell, "GAMA", "The processor jar could not be generated",
-					ResourceUtils.error(String.valueOf(e.getCause()), e.getCause()));
+			Throwable cause = e.getCause() != null ? e.getCause() : e;
+			return ResourceUtils.error(String.valueOf(cause.getMessage()), cause);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-		} catch (CoreException | java.io.IOException e) {
-			ErrorDialog.openError(shell, "GAMA", "The processor jar could not be generated",
-					ResourceUtils.error(e.getMessage(), e));
+			throw new OperationCanceledException();
+		} catch (java.io.IOException e) {
+			return ResourceUtils.error(e.getMessage(), e);
 		}
-		return null;
 	}
 
 	private static final class ProcessorJarBuilder implements IJarBuilder, IJarBuilderExtension {

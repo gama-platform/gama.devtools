@@ -29,12 +29,17 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jdt.apt.core.util.AptConfig;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jface.dialogs.ErrorDialog;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
 
 import gama.ui.devtools.config.ConfigurationIssue;
 import gama.ui.devtools.config.PluginConfigurationChecker;
 import gama.ui.devtools.util.ExplorerRefresh;
 import gama.ui.devtools.util.GamaProjects;
 import gama.ui.devtools.util.Notifier;
+import gama.ui.devtools.util.ResourceUtils;
+import gama.ui.devtools.handlers.RebuildProcessorJarHandler;
 
 /**
  * Resets the GAML annotation processing of a set of GAMA plugins and rebuilds them. This
@@ -43,6 +48,7 @@ import gama.ui.devtools.util.Notifier;
  * <ol>
  * <li>refreshes the whole workspace recursively from disk;</li>
  * <li>sets the workspace Java compiler compliance, source and target levels to Java 25;</li>
+ * <li>rebuilds {@code gama.annotations} and {@code gama.processor} and exports {@code gama.processor.jar};</li>
  * <li>repairs the configuration of the plugins (see {@link PluginConfigurationChecker});</li>
  * <li>disables annotation processing on the plugins;</li>
  * <li>deletes their 'gaml' folders;</li>
@@ -57,6 +63,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 
 	private final List<IProject> targets;
 	private final boolean wholeWorkspace;
+	private final boolean showProcessorErrors;
 	private volatile boolean succeeded;
 
 	/**
@@ -66,9 +73,23 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 	 *            whether the whole workspace is cleaned and rebuilt, or only the targets
 	 */
 	public CleanAndRebuildJob(final List<IProject> targets, final boolean wholeWorkspace) {
+		this(targets, wholeWorkspace, false);
+	}
+
+	/**
+	 * @param targets
+	 *            the GAMA plugins to reset
+	 * @param wholeWorkspace
+	 *            whether the whole workspace is cleaned and rebuilt, or only the targets
+	 * @param showProcessorErrors
+	 *            whether processor rebuild errors should be reported in an error dialog and abort the rest of the build
+	 */
+	public CleanAndRebuildJob(final List<IProject> targets, final boolean wholeWorkspace,
+			final boolean showProcessorErrors) {
 		super("Clean and rebuild GAMA plugins");
 		this.targets = new ArrayList<>(targets);
 		this.wholeWorkspace = wholeWorkspace;
+		this.showProcessorErrors = showProcessorErrors;
 		setRule(ResourcesPlugin.getWorkspace().getRoot());
 		setUser(true);
 		ExplorerRefresh.after(this);
@@ -97,10 +118,12 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 			var compilerOptions = JavaCore.getOptions();
 			JavaCore.setComplianceOptions(JavaCore.VERSION_25, compilerOptions);
 			JavaCore.setOptions(compilerOptions);
+			sub.subTask("Rebuilding annotation processor");
+			if (!rebuildProcessor(sub.split(5))) return Status.OK_STATUS;
 			sub.subTask("Repairing configuration");
 			List<ConfigurationIssue> issues = PluginConfigurationChecker.check(targets, sub.split(3));
 			PluginConfigurationChecker.repair(issues, sub.split(2));
-			sub.setWorkRemaining(90);
+			sub.setWorkRemaining(85);
 			sub.subTask("Resetting annotation processing");
 			try {
 				for (IProject p : targets) { AptConfig.setEnabled(GamaProjects.java(p), false); }
@@ -138,6 +161,58 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 			for (IProject p : targets) { AptConfig.setEnabled(GamaProjects.java(p), true); }
 			return Status.CANCEL_STATUS;
 		}
+	}
+
+	private boolean rebuildProcessor(final IProgressMonitor monitor) throws CoreException {
+		IProject proc = GamaProjects.processor();
+		if (proc == null || !proc.isOpen()) {
+			if (showProcessorErrors) {
+				showProcessorError("The project '" + GamaProjects.PROCESSOR_PROJECT + "' is not open",
+						ResourceUtils.error("The project '" + GamaProjects.PROCESSOR_PROJECT + "' is not open", null));
+				return false;
+			}
+			return true;
+		}
+		var desc = proc.getFile(RebuildProcessorJarHandler.JARDESC);
+		if (!desc.exists()) {
+			if (showProcessorErrors) {
+				showProcessorError("'" + desc.getFullPath() + "' does not exist",
+						ResourceUtils.error("'" + desc.getFullPath() + "' does not exist", null));
+				return false;
+			}
+			return true;
+		}
+		SubMonitor sub = SubMonitor.convert(monitor, 3);
+		List<IBuildConfiguration> configs = new ArrayList<>();
+		IProject annotations = GamaProjects.root().getProject(GamaProjects.ANNOTATIONS_PROJECT);
+		if (annotations.isOpen()) { configs.add(annotations.getActiveBuildConfig()); }
+		configs.add(proc.getActiveBuildConfig());
+		IBuildConfiguration[] array = configs.toArray(IBuildConfiguration[]::new);
+		ResourcesPlugin.getWorkspace().build(array, IncrementalProjectBuilder.CLEAN_BUILD, true, sub.split(1));
+		ResourcesPlugin.getWorkspace().build(array, IncrementalProjectBuilder.FULL_BUILD, true, sub.split(1));
+		IStatus status = RebuildProcessorJarHandler.exportProcessorJar(null, sub.split(1));
+		if (status.matches(IStatus.CANCEL)) throw new OperationCanceledException();
+		if (!status.isOK()) {
+			ResourceUtils.log(new CoreException(status));
+			if (showProcessorErrors) {
+				showProcessorError(status.getSeverity() == IStatus.ERROR
+						? "The processor jar could not be generated"
+						: "The processor export reported problems; release reuse is disabled.", status);
+				return status.getSeverity() != IStatus.ERROR;
+			}
+		}
+		return true;
+	}
+
+	private static void showProcessorError(final String message, final IStatus status) {
+		if (!PlatformUI.isWorkbenchRunning()) return;
+		var display = PlatformUI.getWorkbench().getDisplay();
+		if (display.isDisposed()) return;
+		display.asyncExec(() -> {
+			if (display.isDisposed()) return;
+			Shell shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
+			ErrorDialog.openError(shell, "GAMA", message, status);
+		});
 	}
 
 	private IBuildConfiguration[] buildConfigurations() throws CoreException {
