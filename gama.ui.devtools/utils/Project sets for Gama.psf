@@ -30,25 +30,29 @@
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.extension.traffic"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.core"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.dependencies"/>
-<project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.devtools"/>
+<project reference="1.0,https://github.com/gama-platform/gama.devtools.git,main,gama.feature.devtools"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.export"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.extension.image"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.extension.sound"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.extension.stats"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.extensions"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.library"/>
+<project reference="1.0,https://github.com/gama-platform/gama.shared.models.git,main,gama.feature.shared.models"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.ui"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.ui.dependencies"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.ui.editor"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.ui.experiment"/>
+<project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.feature.ui.export"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.headless"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.library"/>
-<project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.parent"/>
+<project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.p2site"/>
+<project reference="1.0,https://github.com/gama-platform/gama.devtools.git,main,gama.p2site.devtools"/>
+<project reference="1.0,https://github.com/gama-platform/gama.shared.models.git,main,gama.p2site.shared.models"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.processor"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.product"/>
 <project reference="1.0,https://github.com/gama-platform/gama.shared.models.git,main,gama.shared.models"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.application"/>
-<project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.devtools"/>
+<project reference="1.0,https://github.com/gama-platform/gama.devtools.git,main,gama.ui.devtools"/>
 <project reference="1.0,https://github.com/gama-platform-plugins/gama.graphical.modeling.git,GAMA_2026-06,gama.ui.diagram"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.display.java2d"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.display.opengl"/>
@@ -63,6 +67,8 @@
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.ui.viewers"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gama.workspace"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gaml.compiler"/>
+<project reference="1.0,https://github.com/project-SIMPLE/simple.toolchain.git,2026-03,GAMA Plugin/gaml.extension.unity"/>
+<project reference="1.0,https://github.com/project-SIMPLE/simple.toolchain.git,2026-03,GAMA Plugin/gaml.feature.unity"/>
 <project reference="1.0,https://github.com/gama-platform/gama.git,main,gaml.grammar"/>
 </provider>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1708537417360_7" label="==================== BUILD" name="==================== BUILD">
@@ -86,19 +92,21 @@
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.dependencies" type="4"/>
 <item elementID="=gama.dependencies" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.ui.dependencies" type="4"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.shared.models" type="4"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.p2site.shared.models" type="4"/>
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1792927562738_18" label="==================== DEV" name="==================== DEV">
-<item elementID="=gama.ui.devtools" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.devtools" type="4"/>
+<item elementID="=gama.ui.devtools" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.p2site.devtools" type="4"/>
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1793165304294_18" label="==================== EXPORT" name="==================== EXPORT">
 <item elementID="=gama.ui.export" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.export" type="4"/>
 <item elementID="=gama.export" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.ui.export" type="4"/>
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1708537359891_6" label="==================== EXTENSIONS" name="==================== EXTENSIONS">
-<item elementID="=gama.ui.copilot" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
-<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.feature.copilot" type="4"/>
 <item elementID="=gama.extension.traffic" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.rds" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.stats" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
@@ -108,8 +116,6 @@
 <item elementID="=gama.extension.gml" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.osm" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.dataframe" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
-<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.experimental.mcp" type="4"/>
-<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.experimental.feature.mcp" type="4"/>
 <item elementID="=gama.extension.batch" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.geopackage" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.extension.sound" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
@@ -141,6 +147,10 @@
 <item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/gama.library" type="4"/>
 <item elementID="=gama.shared.models" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 <item elementID="=gama.ui.shared.models" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
+</workingSets>
+<workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1722774536417_13" label="==================== SIMPLE" name="==================== SIMPLE">
+<item elementID="=gaml.feature.unity" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
+<item elementID="=gaml.extension.unity" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
 </workingSets>
 <workingSets editPageId="org.eclipse.jdt.ui.JavaWorkingSetPage" id="1708537458301_9" label="==================== UI" name="==================== UI">
 <item elementID="=gama.ui.display.opengl" factoryID="org.eclipse.jdt.ui.PersistableJavaElementFactory"/>
