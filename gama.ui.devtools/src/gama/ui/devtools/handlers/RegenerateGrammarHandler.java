@@ -55,6 +55,8 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 		}
 
 		if (!PlatformUI.getWorkbench().saveAllEditors(true)) return null;
+		Boolean rebuildProcessor = CleanAndRebuildHandler.shouldRebuildProcessor(shell);
+		if (rebuildProcessor == null) return null;
 		try {
 			ILaunchManager manager = DebugPlugin.getDefault().getLaunchManager();
 			ILaunchConfigurationType type = manager
@@ -82,7 +84,7 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 					for (ILaunch launch : launches) {
 						if (configuration.equals(launch.getLaunchConfiguration())) {
 							manager.removeLaunchListener(this);
-							rebuildAfterGeneration(launch);
+							rebuildAfterGeneration(launch, rebuildProcessor);
 							return;
 						}
 					}
@@ -126,7 +128,7 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 		return null;
 	}
 
-	private static void rebuildAfterGeneration(final ILaunch launch) {
+	private static void rebuildAfterGeneration(final ILaunch launch, final boolean rebuildProcessor) {
 		try {
 			var processes = launch.getProcesses();
 			if (processes.length == 0) {
@@ -139,7 +141,7 @@ public final class RegenerateGrammarHandler extends AbstractHandler {
 							"The grammar workflow exited with status " + exit + ". See the Console view.", null));
 				}
 			}
-			new CleanAndRebuildJob(GamaProjects.all(), true).schedule();
+			new CleanAndRebuildJob(GamaProjects.all(), true, rebuildProcessor, false).schedule();
 		} catch (CoreException e) {
 			ResourceUtils.log(e);
 			Notifier.show("GAML grammar regeneration failed",

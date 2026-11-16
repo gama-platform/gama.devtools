@@ -12,6 +12,8 @@ package gama.ui.devtools.launch;
 
 import java.util.List;
 
+import java.util.Set;
+
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.ui.DebugUITools;
@@ -152,10 +154,13 @@ public final class GamaLaunchDialog extends TitleAreaDialog {
 	@Override
 	protected void okPressed() {
 		try {
-			if (configuration.getSelectionIndex() == 0 && !GamaLaunches.missingProjects(flavor()).isEmpty()) {
-				new WizardDialog(getShell(), new InstallSourcesWizard(Kind.CORE)).open();
-				refresh();
-				return;
+			if (configuration.getSelectionIndex() == 0) {
+				Set<String> missing = GamaLaunches.missingProjects(flavor());
+				if (!missing.isEmpty()) {
+					new WizardDialog(getShell(), new InstallSourcesWizard(Kind.CORE, missing)).open();
+					refresh();
+					return;
+				}
 			}
 			result = choose();
 			if (result != null) { super.okPressed(); }

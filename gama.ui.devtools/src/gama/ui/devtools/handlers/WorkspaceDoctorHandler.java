@@ -76,7 +76,7 @@ public final class WorkspaceDoctorHandler extends AbstractHandler {
 					}
 				}
 				case "Install core sources" ->
-					new WizardDialog(window.getShell(), new InstallSourcesWizard(Kind.CORE)).open();
+					new WizardDialog(window.getShell(), new InstallSourcesWizard(Kind.CORE, missingProjects)).open();
 				default -> { }
 			}
 		} catch (CoreException e) {

@@ -32,6 +32,12 @@ public class DevToolsPreferences extends AbstractPreferenceInitializer {
 	/** Whether to confirm before replacing an existing local GAMA release. */
 	public static final String CONFIRM_RELEASE_REPLACEMENT = "gama.devtools.confirmReleaseReplacement";
 
+	/** Whether to ask before rebuilding the annotation processor when cleaning and building all GAMA plugins. */
+	public static final String ASK_REBUILD_PROCESSOR = "gama.devtools.askRebuildProcessor";
+
+	/** Whether cleaning and building all GAMA plugins should rebuild the annotation processor. */
+	public static final String REBUILD_PROCESSOR_ON_CLEAN = "gama.devtools.rebuildProcessorOnClean";
+
 	@Override
 	public void initializeDefaultPreferences() {
 		IPreferenceStore store = store();
@@ -39,6 +45,8 @@ public class DevToolsPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(DEFAULT_PREFIX, "gama.extension.");
 		store.setDefault(GETTING_STARTED_PROMPT, true);
 		store.setDefault(CONFIRM_RELEASE_REPLACEMENT, true);
+		store.setDefault(ASK_REBUILD_PROCESSOR, true);
+		store.setDefault(REBUILD_PROCESSOR_ON_CLEAN, true);
 	}
 
 	/** The preference store of the plugin. */

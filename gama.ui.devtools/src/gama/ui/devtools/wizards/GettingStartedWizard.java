@@ -57,6 +57,7 @@ import org.eclipse.ui.statushandlers.StatusManager;
 
 import gama.ui.devtools.config.ConfigurationIssue;
 import gama.ui.devtools.config.PluginConfigurationChecker;
+import gama.ui.devtools.handlers.CleanAndRebuildHandler;
 import gama.ui.devtools.handlers.LaunchGamaHandler;
 import gama.ui.devtools.install.DevelopmentEnvironment;
 import gama.ui.devtools.install.DevelopmentEnvironment.Check;
@@ -475,7 +476,15 @@ public class GettingStartedWizard extends Wizard {
 		}
 
 		private void install(final Kind kind) {
-			new WizardDialog(getShell(), new InstallSourcesWizard(kind, false)).open();
+			Set<String> missing = Set.of();
+			if (kind == Kind.CORE) {
+				try {
+					missing = GamaLaunches.missingProjects(Flavor.GUI);
+				} catch (CoreException e) {
+					ResourceUtils.log(e);
+				}
+			}
+			new WizardDialog(getShell(), new InstallSourcesWizard(kind, false, missing)).open();
 			refresh();
 		}
 
@@ -526,7 +535,9 @@ public class GettingStartedWizard extends Wizard {
 
 		private void build() {
 			if (!PlatformUI.getWorkbench().saveAllEditors(true)) return;
-			CleanAndRebuildJob job = new CleanAndRebuildJob(GamaProjects.all(), true);
+			Boolean rebuildProcessor = CleanAndRebuildHandler.shouldRebuildProcessor(getShell());
+			if (rebuildProcessor == null) return;
+			CleanAndRebuildJob job = new CleanAndRebuildJob(GamaProjects.all(), true, rebuildProcessor, false);
 			boolean[] cancelled = { false };
 			if (!run(this, monitor -> {
 				IWorkspace workspace = ResourcesPlugin.getWorkspace();

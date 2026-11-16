@@ -25,7 +25,7 @@
       </command>
       <command id="gama.ui.devtools.cleanAndRebuild" categoryId="gama.ui.devtools.category"
             name="Clean GAMA plugins"
-            description="Resets the annotation processor of the GAMA plugins, deletes the generated gaml folders and rebuilds everything, without any dialog">
+            description="Resets the annotation processor of the GAMA plugins, deletes the generated gaml folders and rebuilds everything">
          <commandParameter id="gama.ui.devtools.scope" name="Scope (selection or all)" optional="true"/>
       </command>
       <command id="gama.ui.devtools.gamlReport" categoryId="gama.ui.devtools.category"

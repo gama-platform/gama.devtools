@@ -10,6 +10,8 @@
  ********************************************************************************************************/
 package gama.ui.devtools.handlers;
 
+import java.util.Set;
+
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.resources.IResource;
@@ -56,8 +58,9 @@ public final class LaunchGamaHandler extends AbstractHandler {
 				new GamaLaunchDialog(shell, flavor).open();
 				return null;
 			}
-			if (!GamaLaunches.missingProjects(flavor).isEmpty()) {
-				new WizardDialog(shell, new InstallSourcesWizard(Kind.CORE)).open();
+			Set<String> missing = GamaLaunches.missingProjects(flavor);
+			if (!missing.isEmpty()) {
+				new WizardDialog(shell, new InstallSourcesWizard(Kind.CORE, missing)).open();
 				return null;
 			}
 			ILaunchConfiguration config = GamaLaunches.mapped(flavor);

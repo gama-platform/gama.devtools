@@ -40,6 +40,11 @@ public class GamaDevToolsPreferencePage extends FieldEditorPreferencePage implem
 		addField(new StringFieldEditor(DEFAULT_PREFIX, "Default prefix of new plugin ids:", getFieldEditorParent()));
 		addField(new BooleanFieldEditor(GETTING_STARTED_PROMPT,
 				"Offer the Get started wizard when this workspace contains no GAMA sources", getFieldEditorParent()));
+		addField(new BooleanFieldEditor(ASK_REBUILD_PROCESSOR,
+				"Ask whether to rebuild the annotation processor when cleaning all GAMA plugins",
+				getFieldEditorParent()));
+		addField(new BooleanFieldEditor(REBUILD_PROCESSOR_ON_CLEAN,
+				"Rebuild the annotation processor when cleaning all GAMA plugins", getFieldEditorParent()));
 	}
 
 }

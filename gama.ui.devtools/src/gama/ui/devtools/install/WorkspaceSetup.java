@@ -68,6 +68,9 @@ public final class WorkspaceSetup {
 					|| !project.getLocation().toFile().toPath().toRealPath().equals(source.directory().toRealPath())) {
 				throw new IOException("Project " + project.getName() + " already exists at another location.");
 			}
+			if (!project.isOpen()) {
+				project.open(monitor);
+			}
 		} else {
 			description.setLocation(org.eclipse.core.runtime.IPath.fromOSString(source.directory().toString()));
 			project.create(description, monitor);

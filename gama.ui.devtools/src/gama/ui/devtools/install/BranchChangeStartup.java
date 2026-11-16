@@ -27,6 +27,7 @@ import org.eclipse.ui.IStartup;
 
 import gama.ui.devtools.GamaDevToolsActivator;
 import gama.ui.devtools.jobs.CleanAndRebuildJob;
+import gama.ui.devtools.preferences.DevToolsPreferences;
 import gama.ui.devtools.util.GamaProjects;
 
 /** Watches the GAMA source repositories for branch switches and rebuilds the workspace. */
@@ -83,7 +84,8 @@ public final class BranchChangeStartup implements IStartup {
 				if (pendingChange && now - lastChange >= SETTLE_INTERVAL
 						&& (rebuild == null || rebuild.getState() == Job.NONE)) {
 					pendingChange = false;
-					rebuild = new CleanAndRebuildJob(GamaProjects.all(), true);
+					rebuild = new CleanAndRebuildJob(GamaProjects.all(), true,
+							DevToolsPreferences.is(DevToolsPreferences.REBUILD_PROCESSOR_ON_CLEAN), false);
 					rebuild.addJobChangeListener(new JobChangeAdapter() {
 						@Override
 						public void done(final IJobChangeEvent event) {

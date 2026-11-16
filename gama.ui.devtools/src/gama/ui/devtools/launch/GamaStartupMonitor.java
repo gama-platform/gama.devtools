@@ -38,6 +38,7 @@ import org.eclipse.ui.IStartup;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 
+import gama.ui.devtools.handlers.CleanAndRebuildHandler;
 import gama.ui.devtools.jobs.CleanAndRebuildJob;
 import gama.ui.devtools.util.GamaProjects;
 import gama.ui.devtools.util.ResourceUtils;
@@ -182,13 +183,16 @@ public final class GamaStartupMonitor implements ILaunchesListener2, IDebugEvent
 			int choice = dialog.open();
 			if (choice != 0 && choice != 1) return;
 			if (workbench.isClosing() || !workbench.saveAllEditors(true)) return;
+			Boolean rebuildProcessor = CleanAndRebuildHandler
+					.shouldRebuildProcessor(workbench.getModalDialogShellProvider().getShell());
+			if (rebuildProcessor == null) return;
 			Job prepare = Job.create("Stop GAMA before recovery", monitor -> {
 				if (!active) return Status.CANCEL_STATUS;
 				IStatus result = terminate(launch, monitor);
 				if (result.isOK()) {
 					onWorkbench(wb -> {
 						if (monitor.isCanceled()) return;
-						CleanAndRebuildJob job = new CleanAndRebuildJob(GamaProjects.all(), true);
+						CleanAndRebuildJob job = new CleanAndRebuildJob(GamaProjects.all(), true, rebuildProcessor, false);
 						job.addJobChangeListener(relaunchAfter(job, state, choice == 0));
 						job.schedule();
 					});

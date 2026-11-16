@@ -63,6 +63,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 
 	private final List<IProject> targets;
 	private final boolean wholeWorkspace;
+	private final boolean rebuildProcessor;
 	private final boolean showProcessorErrors;
 	private volatile boolean succeeded;
 
@@ -73,7 +74,7 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 	 *            whether the whole workspace is cleaned and rebuilt, or only the targets
 	 */
 	public CleanAndRebuildJob(final List<IProject> targets, final boolean wholeWorkspace) {
-		this(targets, wholeWorkspace, false);
+		this(targets, wholeWorkspace, true, false);
 	}
 
 	/**
@@ -86,9 +87,26 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 	 */
 	public CleanAndRebuildJob(final List<IProject> targets, final boolean wholeWorkspace,
 			final boolean showProcessorErrors) {
+		this(targets, wholeWorkspace, true, showProcessorErrors);
+	}
+
+	/**
+	 * @param targets
+	 *            the GAMA plugins to reset
+	 * @param wholeWorkspace
+	 *            whether the whole workspace is cleaned and rebuilt, or only the targets
+	 * @param rebuildProcessor
+	 *            whether {@code gama.annotations} and {@code gama.processor} should be rebuilt and
+	 *            {@code gama.processor.jar} exported before building
+	 * @param showProcessorErrors
+	 *            whether processor rebuild errors should be reported in an error dialog and abort the rest of the build
+	 */
+	public CleanAndRebuildJob(final List<IProject> targets, final boolean wholeWorkspace,
+			final boolean rebuildProcessor, final boolean showProcessorErrors) {
 		super("Clean and rebuild GAMA plugins");
 		this.targets = new ArrayList<>(targets);
 		this.wholeWorkspace = wholeWorkspace;
+		this.rebuildProcessor = rebuildProcessor;
 		this.showProcessorErrors = showProcessorErrors;
 		setRule(ResourcesPlugin.getWorkspace().getRoot());
 		setUser(true);
@@ -118,8 +136,10 @@ public class CleanAndRebuildJob extends WorkspaceJob {
 			var compilerOptions = JavaCore.getOptions();
 			JavaCore.setComplianceOptions(JavaCore.VERSION_25, compilerOptions);
 			JavaCore.setOptions(compilerOptions);
-			sub.subTask("Rebuilding annotation processor");
-			if (!rebuildProcessor(sub.split(5))) return Status.OK_STATUS;
+			if (rebuildProcessor) {
+				sub.subTask("Rebuilding annotation processor");
+				if (!rebuildProcessor(sub.split(5))) return Status.OK_STATUS;
+			}
 			sub.subTask("Repairing configuration");
 			List<ConfigurationIssue> issues = PluginConfigurationChecker.check(targets, sub.split(3));
 			PluginConfigurationChecker.repair(issues, sub.split(2));

@@ -62,6 +62,8 @@ import gama.ui.devtools.util.ResourceUtils;
 public class InstallSourcesWizard extends Wizard {
 
 	private final Kind kind;
+	private final boolean scheduleBuild;
+	private final Set<String> missingForLaunch;
 	private SourcePage source;
 	private ProjectsPage projects;
 	private OptionsPage options;
@@ -70,17 +72,25 @@ public class InstallSourcesWizard extends Wizard {
 	private Map<String, String> categories = Map.of();
 	private final Map<Repository, Path> checkouts = new LinkedHashMap<>();
 
-	private final boolean scheduleBuild;
-
 	public InstallSourcesWizard(final Kind kind) {
-		this(kind, true);
+		this(kind, true, Set.of());
+	}
+
+	/** @param missingForLaunch when non-empty, only lists these projects as missing prerequisites to launch GAMA */
+	public InstallSourcesWizard(final Kind kind, final Set<String> missingForLaunch) {
+		this(kind, true, missingForLaunch);
 	}
 
 	/** @param scheduleBuild false when the caller refreshes, cleans and builds the workspace itself */
 	public InstallSourcesWizard(final Kind kind, final boolean scheduleBuild) {
+		this(kind, scheduleBuild, Set.of());
+	}
+
+	public InstallSourcesWizard(final Kind kind, final boolean scheduleBuild, final Set<String> missingForLaunch) {
 		this.kind = kind;
 		this.scheduleBuild = scheduleBuild;
-		setWindowTitle("Install " + kind.label);
+		this.missingForLaunch = Set.copyOf(missingForLaunch);
+		setWindowTitle(this.missingForLaunch.isEmpty() ? "Install " + kind.label : "Missing projects to launch GAMA");
 		setNeedsProgressMonitor(true);
 	}
 
@@ -222,7 +232,11 @@ public class InstallSourcesWizard extends Wizard {
 					}
 					locations.put(repository, checkout);
 					if (kind == Kind.CORE) {
-						available.addAll(discovered);
+						for (Project project : discovered) {
+							if (missingForLaunch.isEmpty() || missingForLaunch.contains(project.name())) {
+								available.add(project);
+							}
+						}
 					} else {
 						for (RemoteProject remote : selected) {
 							if (!remote.repository().equals(repository)) continue;
@@ -236,7 +250,10 @@ public class InstallSourcesWizard extends Wizard {
 				}
 			})) return false;
 			if (available.isEmpty()) {
-				page.setErrorMessage("No Eclipse projects (.project files) found in the selected checkout.");
+				page.setErrorMessage(missingForLaunch.isEmpty()
+						? "No Eclipse projects (.project files) found in the selected checkout."
+						: "None of the missing projects (" + String.join(", ", missingForLaunch)
+								+ ") were found in the local checkouts. Click Advanced... to update the repositories.");
 				return false;
 			}
 			checkouts.clear();
@@ -653,11 +670,17 @@ public class InstallSourcesWizard extends Wizard {
 
 		ProjectsPage() {
 			super("projects");
-			setTitle("Import projects");
-			setDescription("Choose projects to import. Existing workspace projects cannot be selected. "
-					+ "Core Maven modules are preselected; "
-					+ String.join(" and ", InstallModel.REQUIRED_CORE_PROJECTS.stream().sorted().toList())
-					+ " are always imported.");
+			if (missingForLaunch.isEmpty()) {
+				setTitle("Import projects");
+				setDescription("Choose projects to import. Existing workspace projects cannot be selected. "
+						+ "Core Maven modules are preselected; "
+						+ String.join(" and ", InstallModel.REQUIRED_CORE_PROJECTS.stream().sorted().toList())
+						+ " are always imported.");
+			} else {
+				setTitle("Missing projects required to launch GAMA");
+				setDescription("The following projects are required to launch GAMA but are missing or closed in "
+						+ "your workspace. Import them to continue.");
+			}
 			setPageComplete(false);
 		}
 
@@ -691,7 +714,9 @@ public class InstallSourcesWizard extends Wizard {
 				@Override public String getText(final Object element) {
 					Project project = (Project) element;
 					return project.name() + "  -  " + project.repository().name()
-							+ (exists(project) ? " (already in workspace)" : project.required() ? " (required)" : "");
+							+ (exists(project) ? " (already in workspace)"
+									: isClosedInWorkspace(project) ? " (closed in workspace)"
+									: project.required() ? " (required)" : "");
 				}
 
 				@Override public Color getForeground(final Object element) {
@@ -753,14 +778,21 @@ public class InstallSourcesWizard extends Wizard {
 
 		private boolean exists(final Project project) {
 			if (!ResourcesPlugin.getWorkspace().validateName(project.name(), IResource.PROJECT).isOK()) return false;
-			return ResourcesPlugin.getWorkspace().getRoot().getProject(project.name()).exists();
+			var existing = ResourcesPlugin.getWorkspace().getRoot().getProject(project.name());
+			return existing.exists() && (missingForLaunch.isEmpty() || existing.isOpen());
+		}
+
+		private boolean isClosedInWorkspace(final Project project) {
+			if (!ResourcesPlugin.getWorkspace().validateName(project.name(), IResource.PROJECT).isOK()) return false;
+			var existing = ResourcesPlugin.getWorkspace().getRoot().getProject(project.name());
+			return existing.exists() && !existing.isOpen();
 		}
 
 		private void populate() {
 			viewer.setInput(available);
 			viewer.setCheckedElements(available.stream()
-					.filter(p -> p.recommended() && !exists(p)
-							&& (kind != Kind.CORE || p.repository().isBase())).toArray());
+					.filter(p -> !exists(p) && (!missingForLaunch.isEmpty()
+							|| p.recommended() && (kind != Kind.CORE || p.repository().isBase()))).toArray());
 			viewer.setGrayedElements(available.stream().filter(p -> exists(p) || p.required()).toArray());
 			validate();
 		}
