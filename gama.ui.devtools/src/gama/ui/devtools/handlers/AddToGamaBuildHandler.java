@@ -44,7 +44,10 @@ public final class AddToGamaBuildHandler extends AbstractHandler {
 	public Object execute(final ExecutionEvent event) {
 		var shell = HandlerUtil.getActiveShell(event);
 		IProject plugin = GamaProjects.firstProject(HandlerUtil.getCurrentSelection(event));
-		if (!GamaProjects.isGamaPlugin(plugin)) return null;
+		if (!GamaProjects.isBundleProject(plugin)) {
+			MessageDialog.openError(shell, "Add to GAMA build", "Select an open Eclipse bundle project.");
+			return null;
+		}
 		try {
 			GamaBuildIntegration.Analysis analysis = GamaBuildIntegration.analyze(plugin);
 			if (isComplete(analysis)) {
@@ -62,45 +65,68 @@ public final class AddToGamaBuildHandler extends AbstractHandler {
 			if (!PlatformUI.getWorkbench().saveAllEditors(true)) return null;
 			analysis = GamaBuildIntegration.analyze(plugin);
 
+			boolean gamaParent = GamaBuildIntegration.usesGamaParent(plugin);
+			if (!gamaParent && analysis.containingFeatures().isEmpty()) {
+				throw new IllegalArgumentException("Import the source feature containing " + analysis.pluginId()
+						+ " before adding its independent reactor to the GAMA build.");
+			}
 			GamaBuildIntegration.Feature feature = selectFeature(shell, analysis);
 			if (feature == null) return null;
 			boolean create = !feature.project().exists();
-			String featureXml = create ? featureXml(feature.id(), analysis.pluginId())
-					: Files.readString(GamaBuildIntegration.file(feature.project(), "feature.xml"));
+			IProject parent = GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT);
 			String parentPom = Files.readString(GamaBuildIntegration.file(
-					GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT), "pom.xml"));
+					parent, "pom.xml"));
 			String product = Files.readString(GamaBuildIntegration.file(
 					GamaProjects.root().getProject(GamaBuildIntegration.PRODUCT_PROJECT),
 					GamaBuildIntegration.PRODUCT_FILE));
-			String updatedFeature = WorkspaceIntegration.addPluginToFeature(featureXml, analysis.pluginId());
-			String pluginPom = Files.readString(GamaBuildIntegration.file(plugin, "pom.xml"));
-			String updatedPluginPom = GamaBuildIntegration.withGamaParentPath(pluginPom, plugin);
-			String featurePom = create ? CodeTemplates.featurePom(feature.id())
-					: Files.readString(GamaBuildIntegration.file(feature.project(), "pom.xml"));
-			String updatedFeaturePom = GamaBuildIntegration.withGamaParentPath(featurePom, feature.project());
-			String modulesWithPlugin = WorkspaceIntegration.addModulePath(parentPom,
-					GamaBuildIntegration.modulePath(GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT), plugin),
-					"gama.extension.");
-			String updatedParent = WorkspaceIntegration.addModulePath(modulesWithPlugin,
-					GamaBuildIntegration.modulePath(GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT),
-							feature.project()),
-					"gama.feature.extension");
+			String updatedFeature;
+			String updatedPluginPom;
+			String updatedFeaturePom;
+			String updatedParent;
+			if (gamaParent) {
+				String featureXml = create ? featureXml(feature.id(), analysis.pluginId())
+						: Files.readString(GamaBuildIntegration.file(feature.project(), "feature.xml"));
+				updatedFeature = WorkspaceIntegration.addPluginToFeature(featureXml, analysis.pluginId());
+				String pluginPom = Files.readString(GamaBuildIntegration.file(plugin, "pom.xml"));
+				updatedPluginPom = GamaBuildIntegration.withGamaParentPath(pluginPom, plugin);
+				String featurePom = create ? CodeTemplates.featurePom(feature.id())
+						: Files.readString(GamaBuildIntegration.file(feature.project(), "pom.xml"));
+				updatedFeaturePom = GamaBuildIntegration.withGamaParentPath(featurePom, feature.project());
+				String modulesWithPlugin = WorkspaceIntegration.addModulePath(parentPom,
+						GamaBuildIntegration.modulePath(parent, plugin), "gama.extension.");
+				updatedParent = WorkspaceIntegration.addModulePath(modulesWithPlugin,
+						GamaBuildIntegration.modulePath(parent, feature.project()), "gama.feature.extension");
+			} else {
+				var reactor = GamaBuildIntegration.independentReactor(plugin, feature.project());
+				boolean featureIntegrated = GamaBuildIntegration.mavenIntegrated(feature.project());
+				if (analysis.pluginMavenIntegrated() != featureIntegrated) {
+					throw new IllegalArgumentException("The bundle or feature is already registered separately. "
+							+ "Reconcile the Maven modules before adding their source reactor.");
+				}
+				String modules = analysis.pluginMavenIntegrated() ? parentPom
+						: WorkspaceIntegration.addModulePath(parentPom,
+								GamaBuildIntegration.modulePath(parent, reactor), "gama.feature.");
+				updatedParent = WorkspaceIntegration.addP2Repositories(modules,
+						Files.readString(reactor.resolve("pom.xml")));
+				updatedFeature = null;
+				updatedPluginPom = null;
+				updatedFeaturePom = null;
+			}
 			String updatedProduct = GamaBuildIntegration.reachable(feature.id(), analysis.productFeatures()) ? product
 					: WorkspaceIntegration.addFeatureToProduct(product, feature.id());
 
 			WorkspaceModifyOperation operation = new WorkspaceModifyOperation() {
 				@Override protected void execute(final IProgressMonitor monitor) throws CoreException {
 					open(plugin, monitor);
-					IProject parent = GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT);
 					IProject productProject = GamaProjects.root().getProject(GamaBuildIntegration.PRODUCT_PROJECT);
 					open(parent, monitor);
 					open(productProject, monitor);
 					if (create) createFeatureProject(feature.project(), monitor);
 					open(feature.project(), monitor);
-					ResourceUtils.write(plugin, "pom.xml", updatedPluginPom, monitor);
+					if (updatedPluginPom != null) ResourceUtils.write(plugin, "pom.xml", updatedPluginPom, monitor);
 					ResourceUtils.write(parent, "pom.xml", updatedParent, monitor);
-					ResourceUtils.write(feature.project(), "feature.xml", updatedFeature, monitor);
-					ResourceUtils.write(feature.project(), "pom.xml", updatedFeaturePom, monitor);
+					if (updatedFeature != null) ResourceUtils.write(feature.project(), "feature.xml", updatedFeature, monitor);
+					if (updatedFeaturePom != null) ResourceUtils.write(feature.project(), "pom.xml", updatedFeaturePom, monitor);
 					ResourceUtils.write(productProject, GamaBuildIntegration.PRODUCT_FILE, updatedProduct, monitor);
 				}
 			};

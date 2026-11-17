@@ -20,8 +20,9 @@ public class GamaProjectTester extends PropertyTester {
 	public boolean test(final Object receiver, final String property, final Object[] args,
 			final Object expectedValue) {
 		if (!(receiver instanceof IProject project)) return false;
+		if ("bundleProject".equals(property)) return GamaProjects.isBundleProject(project);
 		if ("gamaPlugin".equals(property)) return GamaProjects.isGamaPlugin(project);
-		if ("needsBuildIntegration".equals(property) && GamaProjects.isGamaPlugin(project)) {
+		if ("needsBuildIntegration".equals(property) && GamaProjects.isBundleProject(project)) {
 			try {
 				var analysis = GamaBuildIntegration.analyze(project);
 				if (!analysis.pluginMavenIntegrated()) return true;

@@ -227,6 +227,72 @@ public final class GamaBuildIntegration {
 		return false;
 	}
 
+	public static boolean usesGamaParent(final IProject project) throws CoreException {
+		Element parent = child(read(file(project, "pom.xml"), "Cannot read " + project.getName() + "/pom.xml.")
+				.getDocumentElement(), "parent");
+		return parent != null && "org.gama".equals(text(parent, "groupId"))
+				&& "gama.parent".equals(text(parent, "artifactId"));
+	}
+
+	/** Finds a self-contained independent reactor containing both the bundle and its feature. */
+	public static Path independentReactor(final IProject plugin, final IProject feature) throws CoreException {
+		Element parent = child(read(file(plugin, "pom.xml"), "Cannot read " + plugin.getName() + "/pom.xml.")
+				.getDocumentElement(), "parent");
+		if (parent == null) throw error(plugin.getName() + " has no Maven parent reactor.", null);
+		Element relative = child(parent, "relativePath");
+		String path = relative == null ? "../pom.xml" : relative.getTextContent().strip();
+		if (path.isEmpty()) throw error(plugin.getName() + " has no local Maven parent reactor.", null);
+		try {
+			Path parentPom = projectPath(plugin).resolve(path).normalize();
+			if (Files.isDirectory(parentPom)) parentPom = parentPom.resolve("pom.xml");
+			if (!Files.isRegularFile(parentPom)) throw error("The Maven parent POM is missing: " + parentPom, null);
+			parentPom = parentPom.toRealPath();
+			Element root = read(parentPom, "Cannot read the independent Maven reactor " + parentPom + ".")
+					.getDocumentElement();
+			if (child(root, "parent") != null || !"pom".equals(text(root, "packaging"))
+					|| !text(parent, "groupId").equals(text(root, "groupId"))
+					|| !text(parent, "artifactId").equals(text(root, "artifactId"))) {
+				throw error("The Maven parent of " + plugin.getName()
+						+ " must be a self-contained source reactor.", null);
+			}
+			Path reactor = parentPom.getParent();
+			validateReactorModules(reactor, reactor, new LinkedHashSet<>());
+			if (!containsModule(reactor, projectPath(plugin), new LinkedHashSet<>())
+					|| !containsModule(reactor, projectPath(feature), new LinkedHashSet<>())) {
+				throw error("The source reactor must contain both " + plugin.getName() + " and "
+						+ feature.getName() + ".", null);
+			}
+			return reactor;
+		} catch (IOException e) {
+			throw error("Cannot resolve the independent Maven reactor for " + plugin.getName() + ".", e);
+		}
+	}
+
+	private static void validateReactorModules(final Path reactor, final Path directory, final Set<Path> visited)
+			throws CoreException, IOException {
+		if (!visited.add(directory)) return;
+		Element modules = child(read(directory.resolve("pom.xml"), "Cannot inspect source reactor " + directory)
+				.getDocumentElement(), "modules");
+		if (modules == null) return;
+		for (var node = modules.getFirstChild(); node != null; node = node.getNextSibling()) {
+			if (!(node instanceof Element module) || !"module".equals(module.getTagName())) continue;
+			Path nested = directory.resolve(module.getTextContent().strip()).normalize().toRealPath();
+			if (!nested.startsWith(reactor) || !Files.isRegularFile(nested.resolve("pom.xml"))) {
+				throw error("The source reactor contains a module outside its checkout or without a POM: "
+						+ nested, null);
+			}
+			validateReactorModules(reactor, nested, visited);
+		}
+	}
+
+	public static String modulePath(final IProject parent, final Path module) throws CoreException {
+		try {
+			return relativeOrAbsolute(projectPath(parent), module.toRealPath());
+		} catch (IOException e) {
+			throw error("Cannot calculate a Maven module path to " + module + ".", e);
+		}
+	}
+
 	public static String withGamaParentPath(final String pom, final IProject module) throws CoreException {
 		try {
 			var document = InstallModel.xml(new java.io.ByteArrayInputStream(

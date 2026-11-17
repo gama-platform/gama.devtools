@@ -70,14 +70,14 @@
       <handler commandId="gama.ui.devtools.addToGamaBuild" class="gama.ui.devtools.handlers.AddToGamaBuildHandler">
          <enabledWhen>
             <with variable="selection">
-               <iterate ifEmpty="false" operator="or">
-                  <adapt type="org.eclipse.core.resources.IProject">
-                     <and>
-                        <test property="gama.ui.devtools.gamaPlugin" forcePluginActivation="true"/>
+               <and>
+                  <count value="1"/>
+                  <iterate>
+                     <adapt type="org.eclipse.core.resources.IProject">
                         <test property="gama.ui.devtools.needsBuildIntegration" forcePluginActivation="true"/>
-                     </and>
-                  </adapt>
-               </iterate>
+                     </adapt>
+                  </iterate>
+               </and>
             </with>
          </enabledWhen>
       </handler>
@@ -241,28 +241,61 @@
       </menuContribution>
       <menuContribution locationURI="popup:org.eclipse.ui.popup.any?after=additions">
          <menu id="gama.ui.devtools.popup" label="GAMA" icon="icons/gama.png">
-            <command commandId="gama.ui.devtools.addToGamaBuild" style="push"/>
+            <command commandId="gama.ui.devtools.addToGamaBuild" style="push">
+               <visibleWhen>
+                  <reference definitionId="gama.ui.devtools.selectedBundle"/>
+               </visibleWhen>
+            </command>
             <command commandId="gama.ui.devtools.cleanAndRebuild" label="Clean..." style="push">
                <parameter name="gama.ui.devtools.scope" value="selection"/>
+               <visibleWhen>
+                  <reference definitionId="gama.ui.devtools.selectedGamaPlugin"/>
+               </visibleWhen>
             </command>
-            <command commandId="gama.ui.devtools.updateJavaHeaders" label="Update headers..." style="push"/>
-            <command commandId="gama.ui.devtools.gamlReport" label="Report missing annotations..." style="push"/>
+            <command commandId="gama.ui.devtools.updateJavaHeaders" label="Update headers..." style="push">
+               <visibleWhen>
+                  <reference definitionId="gama.ui.devtools.selectedGamaPlugin"/>
+               </visibleWhen>
+            </command>
+            <command commandId="gama.ui.devtools.gamlReport" label="Report missing annotations..." style="push">
+               <visibleWhen>
+                  <reference definitionId="gama.ui.devtools.selectedGamaPlugin"/>
+               </visibleWhen>
+            </command>
             <visibleWhen checkEnabled="false">
-               <with variable="activeMenuSelection">
-                  <iterate ifEmpty="false" operator="or">
-                     <adapt type="org.eclipse.core.resources.IProject">
-                        <test property="gama.ui.devtools.gamaPlugin" forcePluginActivation="true"/>
-                     </adapt>
-                  </iterate>
-               </with>
+               <or>
+                  <reference definitionId="gama.ui.devtools.selectedBundle"/>
+                  <reference definitionId="gama.ui.devtools.selectedGamaPlugin"/>
+               </or>
             </visibleWhen>
          </menu>
       </menuContribution>
    </extension>
 
+   <extension point="org.eclipse.core.expressions.definitions">
+      <definition id="gama.ui.devtools.selectedBundle">
+         <with variable="activeMenuSelection">
+            <iterate ifEmpty="false" operator="or">
+               <adapt type="org.eclipse.core.resources.IProject">
+                  <test property="gama.ui.devtools.bundleProject" forcePluginActivation="true"/>
+               </adapt>
+            </iterate>
+         </with>
+      </definition>
+      <definition id="gama.ui.devtools.selectedGamaPlugin">
+         <with variable="activeMenuSelection">
+            <iterate ifEmpty="false" operator="or">
+               <adapt type="org.eclipse.core.resources.IProject">
+                  <test property="gama.ui.devtools.gamaPlugin" forcePluginActivation="true"/>
+               </adapt>
+            </iterate>
+         </with>
+      </definition>
+   </extension>
+
    <extension point="org.eclipse.core.expressions.propertyTesters">
       <propertyTester id="gama.ui.devtools.gamaProjectTester" class="gama.ui.devtools.util.GamaProjectTester"
-            namespace="gama.ui.devtools" properties="gamaPlugin,needsBuildIntegration" type="org.eclipse.core.resources.IProject"/>
+            namespace="gama.ui.devtools" properties="bundleProject,gamaPlugin,needsBuildIntegration" type="org.eclipse.core.resources.IProject"/>
    </extension>
 
    <!-- New wizards (also available in File > New > Other...) -->

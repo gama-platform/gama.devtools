@@ -59,6 +59,11 @@ public final class GamaProjects {
 
 	private GamaProjects() {}
 
+	/** Returns whether the open project has an Eclipse bundle manifest. */
+	public static boolean isBundleProject(final IProject project) {
+		return project != null && project.isOpen() && project.getFile("META-INF/MANIFEST.MF").exists();
+	}
+
 	/** Removes workspace registrations only; never deletes project contents. */
 	public static void removeMissingProjects(IProgressMonitor monitor) throws CoreException {
 		IProject[] projects = root().getProjects();
