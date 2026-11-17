@@ -123,6 +123,7 @@ The **Create GAMA artefacts** submenu lists all six creation wizards. They are a
 | **Automatic branch-change rebuild** | While Eclipse is open, checks the Git branch of repositories containing open GAMA plugins. After a branch switch settles, automatically refreshes, cleans and rebuilds the workspace using the same GAMA plugin reset as **Clean GAMA plugins**. The initial check does not trigger a build. |
 | **Clean...** (context menu) | The same, limited to the GAMA plugins in the selection: only they are reset, cleaned and rebuilt. The initial refresh still covers the whole workspace. |
 | **Run GAMA > Build local release...** | Builds a runnable GAMA folder for the current OS and architecture, using a privately managed Maven and including JDK 25. Choose the source checkout, JDK and destination (see below). |
+| **Configure GAMA build...** | Chooses features and individual plugin entries for local releases. Choices are saved per checkout in workspace preferences and applied only to the private release snapshot; source files and workspace launches remain unchanged. Restore product defaults to discard the overrides. |
 | **Add to GAMA build...** (bundle context menu) | Adds the selected bundle to the Maven reactor and ensures its feature is reachable from `gama.product/gama.product`. Bundles with an independent, self-contained Maven reactor (such as `gama.shared.models`) retain their parent POMs; import their containing feature project first. GAMA-parented plugins can reuse a feature or create a dedicated one. The command is disabled when the bundle and its feature are already integrated into Maven and the GUI product. |
 | **Repair GAMA plugins > Rebuild annotation processor** | Saves modified editors and regenerates `gama.processor/gama.processor.jar` from `Generate Processor.jardesc`. After a successful export, automatically runs **Clean GAMA plugins**, including the workspace refresh, configuration repair, annotation-processing reset and workspace clean/full build. Use it after modifying `gama.processor` or `gama.annotations`. |
 | **Repair GAMA plugins > Regenerate Xtext grammar** | Saves modified editors and runs the MWE2 workflow `gaml.compiler.gaml.GenerateGaml` from `gaml.grammar` to regenerate the GAML grammar artifacts. After the workflow exits successfully, automatically runs **Clean GAMA plugins**. A failed or terminated workflow does not trigger cleaning or rebuilding. The `gaml.grammar`, `gaml.compiler` and `gama.ui.editor` projects must be open. |
@@ -296,10 +297,18 @@ their original workspace locations. It then installs `gama.annotations`, `gama.p
 reachable from the GUI product are included. Use **Add to GAMA build...** on a workspace plugin to add those
 Maven, feature and product links. The snapshot's target environments and product packaging tasks are restricted to
 the current platform. Tests, signing, deployment and Maven build-cache restoration are disabled.
-No optional integration is treated specially by the release builder: it uses the saved Maven reactor,
-repositories and product definition. Use the source installer's build-inclusion option below to integrate
-optional source features, or configure these files yourself. Installing an extension in the running IDE
-alone does not add it to a release.
+By default, the release builder uses the saved Maven reactor, repositories and product definition.
+**GAMA > Configure GAMA build...** lets you select features from that reactor (including external
+source reactors), and uncheck individual plugins within source features. Checking or unchecking a feature
+also checks or unchecks its nested features. Features supplied by the target platform can be selected,
+but their plugin contents cannot be edited. The dialog saves checkout-specific overrides in workspace
+preferences; only the private snapshot's product and feature definitions are changed. **Restore product
+defaults**, then **Save configuration**, removes those overrides. Cancel leaves saved choices unchanged.
+Maven modules are retained for dependency resolution. Required dependencies may still be resolved by
+Tycho, and removing required contents can cause a build failure. If source changes invalidate saved
+choices, the build reports them and asks you to restore the defaults.
+Use **Add to GAMA build...** or the source installer's build-inclusion option below to make additional
+source features available. Installing an extension in the running IDE alone does not add it to a release.
 This builds the checkout's existing version; it does not bump versions or generate official installers.
 Maven runs with `-T 2C` (two reactor workers per CPU core), building independent modules
 in parallel while respecting dependencies. The annotations, processor and parent stages remain sequential.

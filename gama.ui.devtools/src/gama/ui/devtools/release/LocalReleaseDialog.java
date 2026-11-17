@@ -32,17 +32,23 @@ public final class LocalReleaseDialog {
 
 	public LocalReleasePlan result() { return result; }
 
+	public static Path sourceCheckout() throws IOException {
+		var project = GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT);
+		if (!project.exists() || project.getLocation() == null) {
+			throw new IllegalArgumentException("Import gama.parent into the workspace before building a release.");
+		}
+		return project.getLocation().removeLastSegments(1).toFile().toPath().toRealPath();
+	}
+
 	public int open() {
 		try {
-			var project = GamaProjects.root().getProject(GamaProjects.PARENT_PROJECT);
-			if (!project.exists() || project.getLocation() == null) {
-				throw new IllegalArgumentException("Import gama.parent into the workspace before building a release.");
-			}
-			Path checkout = project.getLocation().removeLastSegments(1).toFile().toPath().toRealPath();
+			Path checkout = sourceCheckout();
+			ReleaseContents.Selection contents = ReleaseContentsDialog.selection(checkout);
+			if (!contents.equals(ReleaseContents.Selection.DEFAULT)) ReleaseContents.read(checkout).validate(contents);
 			Path jdk = selectJdk();
 			DirectoryDialog destination = new DirectoryDialog(shell);
 			destination.setText("Save local GAMA release");
-			destination.setMessage("Build a local release of GAMA. To integrate a custom plugin, use the navigator context menu \"GAMA > Add to GAMA Build...\".");
+			destination.setMessage("Build a local release of GAMA using the choices saved in GAMA > Configure GAMA build... .");
 			destination.setFilterPath(DevToolsPreferences.get("release.destination"));
 			String selected = destination.open();
 			if (selected == null) return Window.CANCEL;
@@ -59,7 +65,7 @@ public final class LocalReleaseDialog {
 				}
 				if (confirm.getReturnCode() != IDialogConstants.YES_ID) return Window.CANCEL;
 			}
-			LocalReleasePlan plan = new LocalReleasePlan(checkout, jdk, directory, target, replaceExisting);
+			LocalReleasePlan plan = new LocalReleasePlan(checkout, jdk, directory, target, replaceExisting, contents);
 			plan.validate();
 			DevToolsPreferences.store().setValue("release.destination", plan.destination().toString());
 			result = plan;

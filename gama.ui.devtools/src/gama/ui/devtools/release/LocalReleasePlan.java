@@ -32,7 +32,13 @@ import org.w3c.dom.Element;
 import gama.ui.devtools.install.InstallModel;
 
 /** GAMA's three-stage build and native-only Tycho configuration, independent of Eclipse. */
-public record LocalReleasePlan(Path source, Path jdk, Path destination, Target target, boolean replaceExisting) {
+public record LocalReleasePlan(Path source, Path jdk, Path destination, Target target, boolean replaceExisting,
+		ReleaseContents.Selection contents) {
+
+	public LocalReleasePlan(final Path source, final Path jdk, final Path destination, final Target target,
+			final boolean replaceExisting) {
+		this(source, jdk, destination, target, replaceExisting, ReleaseContents.Selection.DEFAULT);
+	}
 
 	/**
 	 * Instantiates a new local release plan.

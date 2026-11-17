@@ -18,6 +18,8 @@
             name="Build local release..." description="Builds GAMA for this environment with an automatically managed Maven and saves a runnable release with JDK 25"/>
       <command id="gama.ui.devtools.addToGamaBuild" categoryId="gama.ui.devtools.category"
             name="Add to GAMA build..." description="Integrates a workspace plugin in the GAMA Maven reactor and GUI product"/>
+      <command id="gama.ui.devtools.configureGamaBuild" categoryId="gama.ui.devtools.category"
+            name="Configure GAMA build..." description="Chooses features and plugins for local releases without changing source files"/>
       <command id="gama.ui.devtools.launchGama" categoryId="gama.ui.devtools.category"
             name="Launch GAMA" description="Run or debug workspace GAMA using a standard Eclipse Application configuration">
          <commandParameter id="gama.ui.devtools.launchFlavor" name="Flavor (GUI, HEADLESS, TESTS)" optional="true"/>
@@ -67,6 +69,7 @@
       <handler commandId="gama.ui.devtools.gettingStarted" class="gama.ui.devtools.handlers.GettingStartedHandler"/>
       <handler commandId="gama.ui.devtools.launchGama" class="gama.ui.devtools.handlers.LaunchGamaHandler"/>
       <handler commandId="gama.ui.devtools.buildLocalRelease" class="gama.ui.devtools.handlers.BuildLocalReleaseHandler"/>
+      <handler commandId="gama.ui.devtools.configureGamaBuild" class="gama.ui.devtools.handlers.ConfigureGamaBuildHandler"/>
       <handler commandId="gama.ui.devtools.addToGamaBuild" class="gama.ui.devtools.handlers.AddToGamaBuildHandler">
          <enabledWhen>
             <with variable="selection">
@@ -183,6 +186,7 @@
                <command commandId="gama.ui.devtools.buildLocalRelease" style="push"/>
             </menu>
             <separator name="build" visible="true"/>
+            <command commandId="gama.ui.devtools.configureGamaBuild" style="push"/>
             <command commandId="gama.ui.devtools.cleanAndRebuild" label="Clean GAMA plugins" style="push">
                <parameter name="gama.ui.devtools.scope" value="all"/>
             </command>

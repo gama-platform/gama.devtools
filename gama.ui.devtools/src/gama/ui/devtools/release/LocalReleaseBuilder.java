@@ -53,6 +53,8 @@ public final class LocalReleaseBuilder {
 			plan.stageExternalModules(snapshot, canceled);
 			boolean reuseProcessor = ProcessorReuse.prepare(plan.source(), snapshot, canceled);
 			plan.configureSnapshot(snapshot);
+			progress.accept("Applying local release feature and plugin configuration");
+			ReleaseContents.apply(snapshot, plan.contents());
 			if (reuseProcessor) {
 				progress.accept("Reusing verified Eclipse annotation processor classes");
 				plan.reuseProcessor(snapshot);
