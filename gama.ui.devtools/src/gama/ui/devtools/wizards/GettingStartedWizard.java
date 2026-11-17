@@ -125,6 +125,7 @@ public class GettingStartedWizard extends Wizard {
 		try {
 			ILaunchConfiguration config = launch.existing != null && !launch.regenerate.getSelection() ? launch.existing
 					: GamaLaunches.create(Flavor.GUI, launch.selectedVm());
+			config = GamaLaunches.ensureProductContents(config, Flavor.GUI);
 			GamaLaunches.validate(config, Flavor.GUI);
 			String mode = launch.run.getSelection() ? ILaunchManager.RUN_MODE
 					: launch.debug.getSelection() ? ILaunchManager.DEBUG_MODE : null;

@@ -13,8 +13,10 @@ package gama.ui.devtools.launch;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
@@ -59,24 +61,26 @@ public final class GamaLaunches {
 
 	private GamaLaunches() {}
 
-	public static Set<String> missingProjects(final Flavor flavor) throws CoreException {
-		Set<String> missing = new LinkedHashSet<>();
+	/** The product of a flavor, with the workspace features it reaches and the plug-ins they list for this platform. */
+	private record ProductContents(ProductLaunchSpec spec, Set<String> features, Set<String> missingFeatures,
+			Set<String> plugins) {}
+
+	private static ProductContents productContents(final Flavor flavor) throws CoreException {
 		var root = GamaProjects.root();
 		IFile product = root.getProject("gama.product").getFile(flavor.productFile);
-		if (!product.isAccessible()) {
-			missing.add("gama.product");
-			return missing;
-		}
+		if (!product.isAccessible()) return null;
 		try (var input = product.getContents()) {
 			var spec = ProductLaunchSpec.read(input, Platform.getOS());
 			List<String> features = new ArrayList<>(spec.features());
 			Set<String> visited = new LinkedHashSet<>();
+			Set<String> missingFeatures = new LinkedHashSet<>();
+			Set<String> plugins = new LinkedHashSet<>();
 			for (int i = 0; i < features.size(); i++) {
 				String feature = features.get(i);
 				if (!visited.add(feature)) continue;
 				IFile file = root.getProject(feature).getFile("feature.xml");
 				if (!file.isAccessible()) {
-					missing.add(feature);
+					missingFeatures.add(feature);
 					continue;
 				}
 				var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
@@ -88,20 +92,52 @@ public final class GamaLaunches {
 					for (String tag : List.of("plugin", "includes")) {
 						var entries = document.getElementsByTagName(tag);
 						for (int j = 0; j < entries.getLength(); j++) {
-							String id = ((org.w3c.dom.Element) entries.item(j)).getAttribute("id");
-							if (!id.startsWith("gama.") && !id.startsWith("gaml.")) continue;
+							var entry = (org.w3c.dom.Element) entries.item(j);
+							String id = entry.getAttribute("id");
+							if (id.isBlank() || !matchesPlatform(entry)) continue;
 							if (tag.equals("includes")) features.add(id);
-							else {
-								var model = PluginRegistry.findModel(id);
-								if (model == null || model.getUnderlyingResource() == null
-										|| !model.getUnderlyingResource().getProject().isOpen()) missing.add(id);
-							}
+							else plugins.add(id);
 						}
 					}
 				}
 			}
-		} catch (java.io.IOException | javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException e) {
+			return new ProductContents(spec, visited, missingFeatures, plugins);
+		} catch (java.io.IOException | javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException
+				| IllegalArgumentException e) {
 			throw new CoreException(ResourceUtils.error("Cannot inspect GAMA product requirements.", e));
+		}
+	}
+
+	private static boolean matchesPlatform(final org.w3c.dom.Element entry) {
+		return matches(entry.getAttribute("os"), Platform.getOS()) && matches(entry.getAttribute("ws"), Platform.getWS())
+				&& matches(entry.getAttribute("arch"), Platform.getOSArch());
+	}
+
+	private static boolean matches(final String filter, final String value) {
+		if (filter.isBlank()) return true;
+		for (String candidate : filter.split(",")) { if (candidate.strip().equals(value)) return true; }
+		return false;
+	}
+
+	private static boolean isGamaId(final String id) {
+		return id.startsWith("gama.") || id.startsWith("gaml.");
+	}
+
+	public static Set<String> missingProjects(final Flavor flavor) throws CoreException {
+		Set<String> missing = new LinkedHashSet<>();
+		var contents = productContents(flavor);
+		if (contents == null) {
+			missing.add("gama.product");
+			return missing;
+		}
+		for (String feature : contents.missingFeatures()) {
+			if (contents.spec().features().contains(feature) || isGamaId(feature)) missing.add(feature);
+		}
+		for (String id : contents.plugins()) {
+			if (!isGamaId(id)) continue;
+			var model = PluginRegistry.findModel(id);
+			if (model == null || model.getUnderlyingResource() == null
+					|| !model.getUnderlyingResource().getProject().isOpen()) missing.add(id);
 		}
 		for (String id : List.of(flavor.bundle, "gama.core", "gama.api")) {
 			var model = PluginRegistry.findModel(id);
@@ -249,9 +285,7 @@ public final class GamaLaunches {
 				throw error("The product startup bundle " + startup.id()
 						+ " is unavailable. Import its project or resolve the GAMA target platform.");
 			}
-			startups.add(String.join(":", startup.id(), model.getPluginBase().getVersion(), "default", "true",
-					startup.level().isBlank() || startup.level().equals("0") ? "default" : startup.level(),
-					Boolean.toString(startup.autoStart())));
+			startups.add(startupEntry(startup, model.getPluginBase().getVersion()));
 		}
 		copy.setAttribute(IPDELauncherConstants.ADDITIONAL_PLUGINS, startups);
 		String runtime = "${workspace_loc}/../gama-runtime-" + flavor.name().toLowerCase(java.util.Locale.ROOT);
@@ -291,6 +325,102 @@ public final class GamaLaunches {
 		ILaunchConfiguration config = copy.doSave();
 		map(flavor, config);
 		return config;
+	}
+
+	/**
+	 * Adds to a feature- or plug-in-based configuration what the flavor's product requires and it lacks: product
+	 * features, the plug-ins they list for this platform, and the product's startup bundles. Configurations launching
+	 * all plug-ins are left unchanged. Returns the saved configuration and logs what was added.
+	 */
+	public static ILaunchConfiguration ensureProductContents(final ILaunchConfiguration config, final Flavor flavor)
+			throws CoreException {
+		if (config.getAttribute(IPDELauncherConstants.USE_DEFAULT, true)) return config;
+		var contents = productContents(flavor);
+		if (contents == null) return config;
+		var copy = config.getWorkingCopy();
+		List<String> added = new ArrayList<>();
+		if (config.getAttribute(IPDELauncherConstants.USE_CUSTOM_FEATURES, false)) {
+			Set<String> selected = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.SELECTED_FEATURES, Set.<String>of()));
+			Set<String> roots = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.ROOT_FEATURES, Set.<String>of()));
+			Set<String> present = new LinkedHashSet<>();
+			for (String entry : selected) present.add(entry.substring(0, entry.indexOf(':') < 0 ? entry.length() : entry.indexOf(':')));
+			for (String feature : contents.spec().features()) {
+				if (present.contains(feature)) continue;
+				selected.add(feature + ":" + IPDELauncherConstants.LOCATION_DEFAULT);
+				roots.add(feature);
+				added.add(feature);
+			}
+			copy.setAttribute(IPDELauncherConstants.SELECTED_FEATURES, selected);
+			copy.setAttribute(IPDELauncherConstants.ROOT_FEATURES, roots);
+			Set<String> additional = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.ADDITIONAL_PLUGINS, Set.<String>of()));
+			Set<String> additionalIds = new LinkedHashSet<>();
+			for (String entry : additional) additionalIds.add(entry.split(":", 2)[0]);
+			for (var startup : contents.spec().startups()) {
+				if (additionalIds.contains(startup.id())) continue;
+				var model = PluginRegistry.findModel(startup.id());
+				if (model == null) continue;
+				additional.add(startupEntry(startup, model.getPluginBase().getVersion()));
+				added.add(startup.id());
+			}
+			copy.setAttribute(IPDELauncherConstants.ADDITIONAL_PLUGINS, additional);
+		} else {
+			boolean automaticAdd = config.getAttribute(IPDELauncherConstants.AUTOMATIC_ADD, true);
+			Set<String> workspace = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.SELECTED_WORKSPACE_BUNDLES, Set.<String>of()));
+			Set<String> deselected = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.DESELECTED_WORKSPACE_BUNDLES, Set.<String>of()));
+			Set<String> target = new LinkedHashSet<>(config.getAttribute(IPDELauncherConstants.SELECTED_TARGET_BUNDLES, Set.<String>of()));
+			Set<String> present = new LinkedHashSet<>();
+			for (String entry : target) present.add(bundleId(entry));
+			for (String entry : workspace) present.add(bundleId(entry));
+			Set<String> excluded = new LinkedHashSet<>();
+			for (String entry : deselected) excluded.add(bundleId(entry));
+			Map<String, String> startLevels = new LinkedHashMap<>();
+			for (var startup : contents.spec().startups()) {
+				startLevels.put(startup.id(), (startup.level().isBlank() || startup.level().equals("0") ? "default"
+						: startup.level()) + ":" + startup.autoStart());
+			}
+			Set<String> required = new LinkedHashSet<>(contents.plugins());
+			required.addAll(startLevels.keySet());
+			for (String id : required) {
+				var model = PluginRegistry.findModel(id);
+				if (model == null) continue;
+				boolean inWorkspace = model.getUnderlyingResource() != null;
+				if (inWorkspace && automaticAdd ? !excluded.contains(id) : present.contains(id)) continue;
+				String level = startLevels.getOrDefault(id, "default:default");
+				if (inWorkspace) {
+					deselected.removeIf(entry -> bundleId(entry).equals(id));
+					if (!automaticAdd) workspace.add(id + "@" + level);
+				} else {
+					target.add(id + "*" + model.getPluginBase().getVersion() + "@" + level);
+				}
+				added.add(id);
+			}
+			copy.setAttribute(IPDELauncherConstants.SELECTED_WORKSPACE_BUNDLES, workspace);
+			copy.setAttribute(IPDELauncherConstants.DESELECTED_WORKSPACE_BUNDLES, deselected);
+			copy.setAttribute(IPDELauncherConstants.SELECTED_TARGET_BUNDLES, target);
+			if (!added.isEmpty()) copy.setAttribute(IPDELauncherConstants.AUTOMATIC_INCLUDE_REQUIREMENTS, true);
+		}
+		if (added.isEmpty()) return config;
+		ILaunchConfiguration saved = copy.doSave();
+		GamaDevToolsActivator.getInstance().getLog().log(new org.eclipse.core.runtime.Status(
+				org.eclipse.core.runtime.IStatus.INFO, GamaDevToolsActivator.PLUGIN_ID,
+				"Added to launch configuration '" + saved.getName() + "', as required by " + flavor.productFile
+						+ ": " + String.join(", ", added)));
+		return saved;
+	}
+
+	private static String bundleId(final String entry) {
+		int end = entry.length();
+		for (char c : new char[] { '*', '@' }) {
+			int index = entry.indexOf(c);
+			if (index >= 0 && index < end) end = index;
+		}
+		return entry.substring(0, end);
+	}
+
+	private static String startupEntry(final ProductLaunchSpec.Startup startup, final String version) {
+		return String.join(":", startup.id(), version, "default", "true",
+				startup.level().isBlank() || startup.level().equals("0") ? "default" : startup.level(),
+				Boolean.toString(startup.autoStart()));
 	}
 
 	public static void validate(final ILaunchConfiguration config, final Flavor flavor) throws CoreException {

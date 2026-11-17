@@ -70,6 +70,7 @@ public final class LaunchGamaHandler extends AbstractHandler {
 				config = dialog.result();
 				flavor = dialog.selectedFlavor();
 			}
+			config = GamaLaunches.ensureProductContents(config, flavor);
 			GamaLaunches.validate(config, flavor);
 			if (flavor == Flavor.HEADLESS) {
 				String args = config.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROGRAM_ARGUMENTS, "");

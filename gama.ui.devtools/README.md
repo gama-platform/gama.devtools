@@ -62,6 +62,11 @@ It then provides blue icons for cleaning all GAMA plugins, running the UI,
 debugging the UI, exporting a local release, and searching for a GAML keyword.
 Run and Debug use the same GUI launch configuration as the menu commands. When no configuration
 is associated yet, they open **Configure GAMA Launches** before launching; canceling does not launch.
+Before each launch, the associated configuration is completed from its product (`gama.product` or
+`gama.headless.product`): missing product features (feature-based launches), or missing plug-ins listed by
+the product features for the current platform (plug-in-based launches, which then also include required
+plug-ins automatically), and missing startup bundles are added and saved. Additions are reported in the
+Error Log. Configurations launching all workspace and target plug-ins are left unchanged.
 Every GAMA Developer Tools launch command refreshes the whole workspace recursively from disk before
 starting the configured UI, headless or test launch. The refresh runs as a cancellable job with an Eclipse
 progress dialog; canceling it prevents the launch. Eclipse then handles the launch normally. The progress
