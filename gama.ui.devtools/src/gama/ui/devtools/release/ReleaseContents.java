@@ -81,7 +81,10 @@ public final class ReleaseContents {
 		Map<String, Feature> features = new LinkedHashMap<>();
 		scan(source.resolve("gama.parent"), features, new LinkedHashSet<>());
 		Document product = xml(source.resolve("gama.product/gama.product"));
-		if (!"true".equals(product.getDocumentElement().getAttribute("useFeatures"))) {
+		Element productRoot = product.getDocumentElement();
+		// PDE uses type="features" (current) or useFeatures="true" (legacy)
+		if (!"features".equals(productRoot.getAttribute("type"))
+				&& !"true".equals(productRoot.getAttribute("useFeatures"))) {
 			throw new IOException("The GAMA product must be feature-based to configure release contents.");
 		}
 		Element entries = child(product.getDocumentElement(), "features");

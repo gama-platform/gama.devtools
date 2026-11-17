@@ -183,10 +183,10 @@
                   <parameter name="gama.ui.devtools.launchMode" value="debug"/>
                </command>
                <separator name="release" visible="true"/>
+               <command commandId="gama.ui.devtools.configureGamaBuild" style="push"/>
                <command commandId="gama.ui.devtools.buildLocalRelease" style="push"/>
             </menu>
             <separator name="build" visible="true"/>
-            <command commandId="gama.ui.devtools.configureGamaBuild" style="push"/>
             <command commandId="gama.ui.devtools.cleanAndRebuild" label="Clean GAMA plugins" style="push">
                <parameter name="gama.ui.devtools.scope" value="all"/>
             </command>

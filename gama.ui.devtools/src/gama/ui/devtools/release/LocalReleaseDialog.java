@@ -48,7 +48,7 @@ public final class LocalReleaseDialog {
 			Path jdk = selectJdk();
 			DirectoryDialog destination = new DirectoryDialog(shell);
 			destination.setText("Save local GAMA release");
-			destination.setMessage("Build a local release of GAMA using the choices saved in GAMA > Configure GAMA build... .");
+			destination.setMessage("Build a local release of GAMA using the choices saved in GAMA > Run GAMA > Configure GAMA build... .");
 			destination.setFilterPath(DevToolsPreferences.get("release.destination"));
 			String selected = destination.open();
 			if (selected == null) return Window.CANCEL;
